@@ -9,6 +9,34 @@ import math
 class EstimateGenerator:
     """Класс для автоматической генерации смет по шаблонам"""
     
+    # Регионы с повышенной ставкой суточных (700 руб/день)
+    HIGH_RATE_REGIONS = [
+        'ЯНАО', 'Ямало-Ненецкий', 'Ямал',
+        'ХМАО', 'Ханты-Мансийск', 'Югра',
+        'Москва', 'Московская', 'Подмосковье',
+        'Санкт-Петербург', 'СПб', 'Питер', 'Ленинградская'
+    ]
+    
+    @staticmethod
+    def get_daily_rate(location):
+        """
+        Определить ставку суточных в зависимости от региона
+        
+        Args:
+            location: Место проведения мероприятия
+            
+        Returns:
+            Ставка суточных (700 или 500 руб/день)
+        """
+        location_upper = location.upper()
+        
+        # Проверяем, относится ли регион к списку с повышенной ставкой
+        for region in EstimateGenerator.HIGH_RATE_REGIONS:
+            if region.upper() in location_upper:
+                return 700  # ЯНАО, ХМАО, Москва, МО, СПб
+        
+        return 500  # Все остальные регионы
+    
     @staticmethod
     def round_to_beautiful(value):
         """
@@ -67,14 +95,31 @@ class EstimateGenerator:
         # Примерное количество детей (по умолчанию 10-15)
         people_count = 12
         
-        # Распределение бюджета по шаблону:
-        # 30% - Проезд
-        # 30% - Проживание  
-        # 40% - Суточные или Питание
+        # Определяем ставку суточных в зависимости от региона
+        daily_rate = EstimateGenerator.get_daily_rate(event.location)
         
-        proezd_budget = children_budget * 0.3
-        prozhivanie_budget = children_budget * 0.3
-        sutochnie_budget = children_budget * 0.4
+        # Примерное количество дней командировки
+        days_командировки = 5
+        
+        # Рассчитываем сумму на суточные
+        sutochnie_budget = people_count * days_командировки * daily_rate
+        
+        # Остаток бюджета делим между проездом и проживанием
+        remaining_budget = children_budget - sutochnie_budget
+        
+        if remaining_budget > 0:
+            # 50% на проезд, 50% на проживание
+            proezd_budget = remaining_budget * 0.5
+            prozhivanie_budget = remaining_budget * 0.5
+        else:
+            # Если суточные превышают весь бюджет, корректируем
+            sutochnie_budget = children_budget * 0.4
+            proezd_budget = children_budget * 0.3
+            prozhivanie_budget = children_budget * 0.3
+            # Пересчитываем дни командировки исходя из скорректированного бюджета
+            days_командировки = int(sutochnie_budget / (people_count * daily_rate)) if people_count > 0 else 5
+            if days_командировки < 1:
+                days_командировки = 1
         
         # ПРОЕЗД
         # Обычно: количество детей * 2 стороны * ставка
@@ -91,30 +136,27 @@ class EstimateGenerator:
         )
         
         # ПРОЖИВАНИЕ
-        # Обычно: 3-5 дней
-        days_prozhivanie = 4
-        rate_prozhivanie = EstimateGenerator.round_to_beautiful(prozhivanie_budget / (people_count * days_prozhivanie))
+        # Количество дней = дни командировки
+        rate_prozhivanie = EstimateGenerator.round_to_beautiful(prozhivanie_budget / (people_count * days_командировки))
         
         db.add_estimate_item(
             estimate_id,
             'Проживание',
             description="",
             people_count=people_count,
-            days_count=days_prozhivanie,
+            days_count=days_командировки,
             rate=rate_prozhivanie
         )
         
         # СУТОЧНЫЕ
-        days_sutochnie = 5
-        rate_sutochnie = EstimateGenerator.round_to_beautiful(sutochnie_budget / (people_count * days_sutochnie))
-        
+        # Используем фиксированную ставку в зависимости от региона
         db.add_estimate_item(
             estimate_id,
             'Суточные',
-            description="",
+            description=f"по территории ({daily_rate} руб/день)",
             people_count=people_count,
-            days_count=days_sutochnie,
-            rate=rate_sutochnie
+            days_count=days_командировки,
+            rate=daily_rate
         )
         
         return estimate_id
@@ -169,16 +211,33 @@ class EstimateGenerator:
                 end_date=""
             )
             
-            # Распределение бюджета по шаблону для тренера:
-            # 35% - Проезд
-            # 35% - Проживание
-            # 30% - Суточные
-            
-            proezd_budget = budget_per_trainer * 0.35
-            prozhivanie_budget = budget_per_trainer * 0.35
-            sutochnie_budget = budget_per_trainer * 0.30
+            # Определяем ставку суточных в зависимости от региона
+            daily_rate = EstimateGenerator.get_daily_rate(event.location)
             
             people_count = 1  # один тренер
+            
+            # Примерное количество дней командировки
+            days_командировки = 5
+            
+            # Рассчитываем сумму на суточные (1 человек × дни × ставка)
+            sutochnie_budget = people_count * days_командировки * daily_rate
+            
+            # Остаток бюджета делим между проездом и проживанием
+            remaining_budget = budget_per_trainer - sutochnie_budget
+            
+            if remaining_budget > 0:
+                # 50% на проезд, 50% на проживание
+                proezd_budget = remaining_budget * 0.5
+                prozhivanie_budget = remaining_budget * 0.5
+            else:
+                # Если суточные превышают весь бюджет, корректируем
+                sutochnie_budget = budget_per_trainer * 0.35
+                proezd_budget = budget_per_trainer * 0.35
+                prozhivanie_budget = budget_per_trainer * 0.30
+                # Пересчитываем дни командировки исходя из скорректированного бюджета
+                days_командировки = int(sutochnie_budget / daily_rate) if daily_rate > 0 else 5
+                if days_командировки < 1:
+                    days_командировки = 1
             
             # ПРОЕЗД
             days_proezd = 2  # туда и обратно
@@ -194,29 +253,27 @@ class EstimateGenerator:
             )
             
             # ПРОЖИВАНИЕ
-            days_prozhivanie = 5
-            rate_prozhivanie = EstimateGenerator.round_to_beautiful(prozhivanie_budget / (people_count * days_prozhivanie))
+            # Количество дней = дни командировки
+            rate_prozhivanie = EstimateGenerator.round_to_beautiful(prozhivanie_budget / (people_count * days_командировки))
             
             db.add_estimate_item(
                 estimate_id,
                 'Проживание',
                 description="",
                 people_count=people_count,
-                days_count=days_prozhivanie,
+                days_count=days_командировки,
                 rate=rate_prozhivanie
             )
             
             # СУТОЧНЫЕ
-            days_sutochnie = 5
-            rate_sutochnie = EstimateGenerator.round_to_beautiful(sutochnie_budget / (people_count * days_sutochnie))
-            
+            # Используем фиксированную ставку в зависимости от региона (1 человек)
             db.add_estimate_item(
                 estimate_id,
                 'Суточные',
-                description="",
+                description=f"по территории ({daily_rate} руб/день)",
                 people_count=people_count,
-                days_count=days_sutochnie,
-                rate=rate_sutochnie
+                days_count=days_командировки,
+                rate=daily_rate
             )
             
             estimate_ids.append(estimate_id)
