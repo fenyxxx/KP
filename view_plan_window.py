@@ -1171,7 +1171,7 @@ class ViewPlanWindow:
         self.text_area.insert('1.0', report_text)
     
     def _load_annual_ppo_report(self):
-        """Годовой отчет ППО - расчет плановых затрат с разбивкой по кварталам"""
+        """Годовой отчет ППО - расчет плановых затрат с разбивкой по кварталам и детализацией смет"""
         events_data = self.db.get_events_by_year(self.year)
         
         if not events_data:
@@ -1218,17 +1218,47 @@ class ViewPlanWindow:
             
             for idx, event in enumerate(away_events, 1):
                 quarter = get_quarter(event.month)
-                q_totals[quarter] += event.children_budget
-                total_all += event.children_budget
+                
+                # Получаем смету ППО для мероприятия
+                estimates = self.db.get_estimates_by_event(event.id)
+                ppo_estimate = None
+                for est in estimates:
+                    if est[2] == 'ППО':  # estimate_type
+                        ppo_estimate = est
+                        break
                 
                 # Название мероприятия
-                report_text += f"1.{idx:<4} {event.name:<60} {event.location:<20} {event.month:<12} {'':>10} {'':>5} "
+                report_text += f"1.{idx:<3}  {event.name[:57]:<60} {event.location:<20} {event.month:<12} {'':>10} {'':>5} "
                 q_vals = [''] * 4
                 q_vals[quarter-1] = format_rubles(event.children_budget)
                 report_text += f"{format_rubles(event.children_budget):>15} {q_vals[0]:>15} {q_vals[1]:>15} {q_vals[2]:>15} {q_vals[3]:>15}\n"
+                
+                # Детализация по смете
+                if ppo_estimate:
+                    estimate_id = ppo_estimate[0]
+                    items = self.db.get_estimate_items(estimate_id)
+                    
+                    for item in items:
+                        category = item[2]
+                        description = item[3] or ''
+                        people_count = item[4] or 0
+                        days_count = item[5] or 0
+                        rate = item[6] or 0
+                        total = item[7] or 0
+                        
+                        # Форматируем вывод
+                        if category == "Проезд":
+                            report_text += f"       {category:<57} {description:<20} {days_count:<12} {rate:>10.0f} {people_count:<5}\n"
+                        elif category == "Проживание":
+                            report_text += f"       {category:<57} {'дн':<20} {days_count:<12} {rate:>10.0f} {people_count:<5}\n"
+                        elif category == "Суточные":
+                            report_text += f"       {category:<57} {'дн':<20} {days_count:<12} {rate:>10.0f} {people_count:<5}\n"
+                
+                report_text += "\n"
+                q_totals[quarter] += event.children_budget
+                total_all += event.children_budget
             
-            report_text += "\n"
-            report_text += f"{'ИТОГО выездные:':<96} "
+            report_text += f"{'ИТОГО выездные:':<101} "
             report_text += f"{format_rubles(total_all):>15} {format_rubles(q_totals[1]):>15} {format_rubles(q_totals[2]):>15} "
             report_text += f"{format_rubles(q_totals[3]):>15} {format_rubles(q_totals[4]):>15}\n"
             report_text += "\n" + "=" * 180 + "\n\n"
@@ -1246,14 +1276,14 @@ class ViewPlanWindow:
                 q_totals[quarter] += event.children_budget
                 total_all += event.children_budget
                 
-                # Название мероприятия
-                report_text += f"2.{idx:<4} {event.name:<60} {event.location:<20} {event.month:<12} {'':>10} {'':>5} "
+                # Название мероприятия (внутренние без детализации)
+                report_text += f"2.{idx:<4} {event.name[:57]:<60} {event.location:<20} {event.month:<12} {'':>10} {'':>5} "
                 q_vals = [''] * 4
                 q_vals[quarter-1] = format_rubles(event.children_budget)
                 report_text += f"{format_rubles(event.children_budget):>15} {q_vals[0]:>15} {q_vals[1]:>15} {q_vals[2]:>15} {q_vals[3]:>15}\n"
             
             report_text += "\n"
-            report_text += f"{'ИТОГО внутренние:':<96} "
+            report_text += f"{'ИТОГО внутренние:':<101} "
             report_text += f"{format_rubles(total_all):>15} {format_rubles(q_totals[1]):>15} {format_rubles(q_totals[2]):>15} "
             report_text += f"{format_rubles(q_totals[3]):>15} {format_rubles(q_totals[4]):>15}\n"
             report_text += "\n" + "=" * 180 + "\n\n"
@@ -1265,7 +1295,7 @@ class ViewPlanWindow:
             quarter = get_quarter(event.month)
             grand_q_totals[quarter] += event.children_budget
         
-        report_text += f"{'ВСЕГО ИТОГО:':<96} "
+        report_text += f"{'ВСЕГО ИТОГО:':<101} "
         report_text += f"{format_rubles(grand_total):>15} {format_rubles(grand_q_totals[1]):>15} {format_rubles(grand_q_totals[2]):>15} "
         report_text += f"{format_rubles(grand_q_totals[3]):>15} {format_rubles(grand_q_totals[4]):>15}\n"
         report_text += "=" * 180 + "\n"

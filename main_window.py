@@ -313,6 +313,15 @@ class MainWindow:
             label="💰 По типам мероприятий (Выездные/Внутренние)",
             command=lambda: self._open_report_direct('by_type')
         )
+        reports_menu.add_separator()
+        reports_menu.add_command(
+            label="📊 Годовой отчет ППО",
+            command=lambda: self._open_report_direct('annual_ppo')
+        )
+        reports_menu.add_command(
+            label="📋 Годовой отчет УЭВП",
+            command=lambda: self._open_report_direct('annual_uevp')
+        )
         
         # Меню "Просмотр"
         view_menu = tk.Menu(menubar, tearoff=0)
