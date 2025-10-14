@@ -138,6 +138,18 @@ class ViewPlanWindow:
             command=lambda: self._show_report('by_type')
         ).pack(side=tk.LEFT, padx=2)
         
+        ttk.Button(
+            button_frame, text="📊 Годовой отчет ППО", 
+            command=lambda: self._show_report('annual_ppo'),
+            style='Accent.TButton'
+        ).pack(side=tk.LEFT, padx=2)
+        
+        ttk.Button(
+            button_frame, text="📋 Годовой отчет УЭВП", 
+            command=lambda: self._show_report('annual_uevp'),
+            style='Accent.TButton'
+        ).pack(side=tk.LEFT, padx=2)
+        
         # Панель с кнопками сохранения
         save_frame = ttk.Frame(self.window)
         save_frame.pack(fill=tk.X, padx=10, pady=(0, 5))
@@ -187,7 +199,9 @@ class ViewPlanWindow:
             'sports': 'Отчёт по видам спорта',
             'status': 'Отчёт по статусам',
             'summary': 'Краткая сводка',
-            'by_type': 'Финансовый отчёт по типам мероприятий'
+            'by_type': 'Финансовый отчёт по типам мероприятий',
+            'annual_ppo': 'Годовой отчет ППО',
+            'annual_uevp': 'Годовой отчет УЭВП - Потребность на командировочные расходы'
         }
         title = report_titles.get(report_type, 'Календарный план')
         self.window.title(f"{title} - {self.year}")
@@ -208,6 +222,10 @@ class ViewPlanWindow:
             self._load_summary_report()
         elif report_type == 'by_type':
             self._load_by_type_report()
+        elif report_type == 'annual_ppo':
+            self._load_annual_ppo_report()
+        elif report_type == 'annual_uevp':
+            self._load_annual_uevp_report()
         
         self.text_area.config(state='disabled')
     
@@ -1152,6 +1170,109 @@ class ViewPlanWindow:
         
         self.text_area.insert('1.0', report_text)
     
+    def _load_annual_ppo_report(self):
+        """Годовой отчет ППО - план мероприятий с расходами"""
+        events_data = self.db.get_events_by_year(self.year)
+        
+        if not events_data:
+            self.text_area.insert('1.0', "Нет мероприятий на этот год")
+            return
+        
+        events = [Event.from_db_row(row) for row in events_data]
+        
+        report_text = ""
+        report_text += "=" * 150 + "\n"
+        report_text += f"ГОДОВОЙ ОТЧЕТ ППО - ПЛАН МЕРОПРИЯТИЙ ДЮСК \"ЯМБУРГ\" НА {self.year} ГОД\n"
+        report_text += "=" * 150 + "\n\n"
+        
+        # Заголовок таблицы
+        report_text += f"{'№':<5} {'Название мероприятия':<60} {'Организатор':<30} {'Месяц':<15} {'Уч-ки':<6} {'Бюджет ППО':>15}\n"
+        report_text += "=" * 150 + "\n"
+        
+        total_budget = 0
+        for idx, event in enumerate(events, 1):
+            report_text += f"{idx:<5} "
+            report_text += f"{event.name:<60} "
+            report_text += f"{'ДЮСК Ямбург':<30} "
+            report_text += f"{event.month:<15} "
+            report_text += f"{'':>6} "
+            report_text += f"{format_rubles(event.children_budget):>15}\n"
+            total_budget += event.children_budget
+        
+        report_text += "=" * 150 + "\n"
+        report_text += f"{'ИТОГО:':<110} {format_rubles(total_budget):>15}\n"
+        report_text += "=" * 150 + "\n"
+        
+        self.text_area.insert('1.0', report_text)
+    
+    def _load_annual_uevp_report(self):
+        """Годовой отчет УЭВП - потребность на командировочные расходы"""
+        events_data = self.db.get_events_by_year(self.year)
+        
+        if not events_data:
+            self.text_area.insert('1.0', "Нет мероприятий на этот год")
+            return
+        
+        events = [Event.from_db_row(row) for row in events_data]
+        # Только выездные мероприятия
+        events = [e for e in events if e.event_type == "Выездное"]
+        
+        if not events:
+            self.text_area.insert('1.0', "Нет выездных мероприятий на этот год")
+            return
+        
+        report_text = ""
+        report_text += "=" * 170 + "\n"
+        report_text += f"ПОТРЕБНОСТЬ НА КОМАНДИРОВОЧНЫЕ РАСХОДЫ ДЮСК \"ЯМБУРГ\" НА {self.year} ГОД\n"
+        report_text += "=" * 170 + "\n\n"
+        
+        # Заголовок таблицы
+        report_text += f"{'Должность':<20} {'Месяц':<15} {'Дней':<6} {'Город':<25} {'Цель командировки':<50} {'Проезд':>12} {'Прожив.':>12} {'Суточ.':>10} {'ИТОГО':>15}\n"
+        report_text += "=" * 170 + "\n"
+        
+        total_travel = 0
+        total_accommodation = 0
+        total_daily = 0
+        total_all = 0
+        
+        for event in events:
+            # Для каждого мероприятия создаем строку на каждого тренера
+            trainers_count = event.trainers_count if event.trainers_count > 0 else 1
+            
+            for i in range(trainers_count):
+                # Делим бюджет на тренеров примерно по категориям
+                # Примерно: 35% проезд, 35% проживание, 30% суточные
+                trainer_budget = event.trainers_budget / trainers_count if trainers_count > 0 else event.trainers_budget
+                
+                travel = trainer_budget * 0.35
+                accommodation = trainer_budget * 0.35
+                daily = trainer_budget * 0.30
+                
+                total_travel += travel
+                total_accommodation += accommodation
+                total_daily += daily
+                total_all += trainer_budget
+                
+                report_text += f"{'тренер':<20} "
+                report_text += f"{event.month:<15} "
+                report_text += f"{'5':<6} "  # Примерное кол-во дней
+                report_text += f"{event.location:<25} "
+                report_text += f"{event.name[:47]+'...' if len(event.name) > 50 else event.name:<50} "
+                report_text += f"{format_rubles(travel):>12} "
+                report_text += f"{format_rubles(accommodation):>12} "
+                report_text += f"{format_rubles(daily):>10} "
+                report_text += f"{format_rubles(trainer_budget):>15}\n"
+        
+        report_text += "=" * 170 + "\n"
+        report_text += f"{'ИТОГО:':<116} "
+        report_text += f"{format_rubles(total_travel):>12} "
+        report_text += f"{format_rubles(total_accommodation):>12} "
+        report_text += f"{format_rubles(total_daily):>10} "
+        report_text += f"{format_rubles(total_all):>15}\n"
+        report_text += "=" * 170 + "\n"
+        
+        self.text_area.insert('1.0', report_text)
+    
     def _save_report(self, format_type):
         """
         Сохранить отчёт в файл
@@ -1172,7 +1293,9 @@ class ViewPlanWindow:
             'sports': 'По_видам_спорта',
             'status': 'По_статусам',
             'summary': 'Краткая_сводка',
-            'by_type': 'По_типам_мероприятий'
+            'by_type': 'По_типам_мероприятий',
+            'annual_ppo': 'Годовой_отчет_ППО',
+            'annual_uevp': 'Годовой_отчет_УЭВП'
         }
         
         default_name = f"calendar_{self.year}_{report_names.get(self.current_report_type, 'report')}"
