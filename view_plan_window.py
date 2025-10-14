@@ -1654,7 +1654,8 @@ class ViewPlanWindow:
             
             elif self.current_report_type == 'annual_ppo':
                 writer.writerow([
-                    '№', 'Тип', 'Название', 'Место', 'Месяц', 'Бюджет ППО', 'Квартал'
+                    '№', 'Тип', 'Название', 'Место', 'Месяц', 'Бюджет ППО', 'Квартал',
+                    'Категория расходов', 'Описание/Маршрут', 'Дни/Кол-во', 'Ставка', 'Человек', 'Сумма'
                 ])
                 
                 # Определяем квартал
@@ -1667,40 +1668,198 @@ class ViewPlanWindow:
                 
                 for idx, event in enumerate(filtered_events, 1):
                     quarter = q_map.get(event.month, 1)
-                    writer.writerow([
-                        idx,
-                        event.event_type,
-                        event.name,
-                        event.location,
-                        event.month,
-                        f"{event.children_budget:.2f}",
-                        quarter
-                    ])
+                    
+                    # Получаем смету ППО для выездных мероприятий
+                    if event.event_type == "Выездное":
+                        estimates = self.db.get_estimates_by_event(event.id)
+                        ppo_estimate = None
+                        for est in estimates:
+                            if est[2] == 'ППО':  # estimate_type
+                                ppo_estimate = est
+                                break
+                        
+                        if ppo_estimate:
+                            estimate_id = ppo_estimate[0]
+                            items = self.db.get_estimate_items(estimate_id)
+                            
+                            # Первая строка - мероприятие
+                            if items:
+                                first_item = items[0]
+                                category = first_item[2]
+                                description = first_item[3] or ''
+                                days_count = first_item[5] or 0
+                                rate = first_item[6] or 0
+                                people_count = first_item[4] or 0
+                                total = first_item[7] or 0
+                                
+                                writer.writerow([
+                                    idx,
+                                    event.event_type,
+                                    event.name,
+                                    event.location,
+                                    event.month,
+                                    f"{event.children_budget:.2f}",
+                                    quarter,
+                                    category,
+                                    description,
+                                    days_count,
+                                    f"{rate:.2f}",
+                                    people_count,
+                                    f"{total:.2f}"
+                                ])
+                                
+                                # Остальные строки - детализация
+                                for item in items[1:]:
+                                    category = item[2]
+                                    description = item[3] or ''
+                                    days_count = item[5] or 0
+                                    rate = item[6] or 0
+                                    people_count = item[4] or 0
+                                    total = item[7] or 0
+                                    
+                                    writer.writerow([
+                                        '',
+                                        '',
+                                        '',
+                                        '',
+                                        '',
+                                        '',
+                                        '',
+                                        category,
+                                        description,
+                                        days_count,
+                                        f"{rate:.2f}",
+                                        people_count,
+                                        f"{total:.2f}"
+                                    ])
+                            else:
+                                # Нет статей расходов
+                                writer.writerow([
+                                    idx,
+                                    event.event_type,
+                                    event.name,
+                                    event.location,
+                                    event.month,
+                                    f"{event.children_budget:.2f}",
+                                    quarter,
+                                    '',
+                                    '',
+                                    '',
+                                    '',
+                                    '',
+                                    ''
+                                ])
+                        else:
+                            # Нет сметы
+                            writer.writerow([
+                                idx,
+                                event.event_type,
+                                event.name,
+                                event.location,
+                                event.month,
+                                f"{event.children_budget:.2f}",
+                                quarter,
+                                '',
+                                '',
+                                '',
+                                '',
+                                '',
+                                ''
+                            ])
+                    else:
+                        # Внутренние мероприятия без детализации
+                        writer.writerow([
+                            idx,
+                            event.event_type,
+                            event.name,
+                            event.location,
+                            event.month,
+                            f"{event.children_budget:.2f}",
+                            quarter,
+                            '',
+                            '',
+                            '',
+                            '',
+                            '',
+                            ''
+                        ])
             
             elif self.current_report_type == 'annual_uevp':
                 writer.writerow([
-                    '№', 'Название', 'Место', 'Месяц', 'Тренеров', 'Бюджет УЭВП', 'Квартал'
+                    'Должность', 'Месяц', 'Количество дней', 'Город', 'Цель командировки',
+                    'Расходы на проезд, руб.', 'Расходы на проживание, руб.', 'Суточные, руб.',
+                    'Итого расходов, руб.', 'Фактические расходы', 'Экономия/перерасход'
                 ])
                 
-                # Определяем квартал
-                q_map = {
-                    'Январь': 1, 'Февраль': 1, 'Март': 1,
-                    'Апрель': 2, 'Май': 2, 'Июнь': 2,
-                    'Июль': 3, 'Август': 3, 'Сентябрь': 3,
-                    'Октябрь': 4, 'Ноябрь': 4, 'Декабрь': 4
-                }
-                
-                for idx, event in enumerate(filtered_events, 1):
-                    quarter = q_map.get(event.month, 1)
-                    writer.writerow([
-                        idx,
-                        event.name,
-                        event.location,
-                        event.month,
-                        event.trainers_count,
-                        f"{event.trainers_budget:.2f}",
-                        quarter
-                    ])
+                for event in filtered_events:
+                    # Получаем сметы УЭВП для мероприятия
+                    estimates = self.db.get_estimates_by_event(event.id)
+                    uevp_estimates = [est for est in estimates if est[2] == 'УЭВП']  # estimate_type
+                    
+                    trainers_count = event.trainers_count if event.trainers_count > 0 else 1
+                    
+                    if uevp_estimates:
+                        # Для каждого тренера (каждой сметы)
+                        for est in uevp_estimates:
+                            estimate_id = est[0]
+                            trainer_name = est[3] or 'тренер'  # trainer_name
+                            
+                            # Получаем статьи расходов
+                            items = self.db.get_estimate_items(estimate_id)
+                            
+                            proezd = 0
+                            prozhiv = 0
+                            sutochnie = 0
+                            days = 0
+                            
+                            for item in items:
+                                category = item[2]
+                                days_count = item[5] or 0
+                                total = item[7] or 0
+                                
+                                if category == "Проезд":
+                                    proezd = total
+                                elif category == "Проживание":
+                                    prozhiv = total
+                                    if days == 0:
+                                        days = days_count
+                                elif category == "Суточные":
+                                    sutochnie = total
+                                    if days == 0:
+                                        days = days_count
+                            
+                            total_amount = proezd + prozhiv + sutochnie
+                            
+                            writer.writerow([
+                                trainer_name,
+                                event.month,
+                                days if days > 0 else '',
+                                event.location,
+                                event.name,
+                                f"{proezd:.2f}",
+                                f"{prozhiv:.2f}",
+                                f"{sutochnie:.2f}",
+                                f"{total_amount:.2f}",
+                                '0,00 ₽',  # Фактические расходы (пока не заполнено)
+                                f"{total_amount:.2f}"  # Экономия/перерасход
+                            ])
+                    else:
+                        # Если смет нет, показываем хотя бы мероприятие
+                        for t_idx in range(trainers_count):
+                            trainer_budget = event.trainers_budget / trainers_count if trainers_count > 0 else event.trainers_budget
+                            writer.writerow([
+                                'тренер',
+                                event.month,
+                                '',
+                                event.location,
+                                event.name,
+                                '',
+                                '',
+                                '',
+                                f"{trainer_budget:.2f}",
+                                '0,00 ₽',
+                                f"{trainer_budget:.2f}"
+                            ])
             
             else:  # 'full' и 'summary'
                 writer.writerow([
