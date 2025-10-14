@@ -2282,18 +2282,22 @@ class ViewPlanWindow:
 """
         
         elif self.current_report_type == 'annual_ppo':
-            # Годовой отчет ППО с разбивкой по кварталам
+            # Годовой отчет ППО с разбивкой по кварталам и детализацией смет
             html_content += """
-    <table>
+    <table style="font-size: 11px;">
         <thead>
             <tr>
                 <th>№</th>
-                <th>Тип</th>
-                <th>Название</th>
-                <th>Место</th>
-                <th>Месяц</th>
-                <th>Бюджет ППО (₽)</th>
-                <th>Квартал</th>
+                <th>Наименование статей затрат/Мероприятий</th>
+                <th>Место/Ед.изм.</th>
+                <th>Даты/Кол-во</th>
+                <th>Стоим.</th>
+                <th>Чел.</th>
+                <th>Затраты (руб)</th>
+                <th>1 кв.</th>
+                <th>2 кв.</th>
+                <th>3 кв.</th>
+                <th>4 кв.</th>
             </tr>
         </thead>
         <tbody>
@@ -2306,17 +2310,138 @@ class ViewPlanWindow:
                 'Октябрь': 4, 'Ноябрь': 4, 'Декабрь': 4
             }
             
-            for idx, event in enumerate(events, 1):
-                quarter = q_map.get(event.month, 1)
-                html_content += f"""
-            <tr>
-                <td>{idx}</td>
-                <td>{html.escape(event.event_type)}</td>
-                <td>{html.escape(event.name)}</td>
+            # Разделяем на выездные и внутренние
+            away_events = [e for e in events if e.event_type == "Выездное"]
+            internal_events = [e for e in events if e.event_type == "Внутреннее"]
+            
+            # Выездные мероприятия с детализацией
+            if away_events:
+                html_content += """
+            <tr style="background-color: #e6f3ff;">
+                <td colspan="11"><strong>1. ВЫЕЗДНЫЕ МЕРОПРИЯТИЯ</strong></td>
+            </tr>
+"""
+                
+                for idx, event in enumerate(away_events, 1):
+                    quarter = q_map.get(event.month, 1)
+                    
+                    # Получаем смету ППО
+                    estimates = self.db.get_estimates_by_event(event.id)
+                    ppo_estimate = None
+                    for est in estimates:
+                        if est[2] == 'ППО':  # estimate_type
+                            ppo_estimate = est
+                            break
+                    
+                    # Заполняем кварталы
+                    q_vals = ['', '', '', '']
+                    q_vals[quarter-1] = f"{event.children_budget:.2f}"
+                    
+                    # Название мероприятия
+                    html_content += f"""
+            <tr style="font-weight: bold;">
+                <td>1.{idx}</td>
+                <td>{html.escape(event.name[:60])}</td>
                 <td>{html.escape(event.location)}</td>
                 <td>{html.escape(event.month)}</td>
+                <td></td>
+                <td></td>
                 <td>{event.children_budget:.2f}</td>
-                <td>{quarter}</td>
+                <td>{q_vals[0]}</td>
+                <td>{q_vals[1]}</td>
+                <td>{q_vals[2]}</td>
+                <td>{q_vals[3]}</td>
+            </tr>
+"""
+                    
+                    # Детализация по смете
+                    if ppo_estimate:
+                        estimate_id = ppo_estimate[0]
+                        items = self.db.get_estimate_items(estimate_id)
+                        
+                        for item in items:
+                            category = item[2]
+                            description = item[3] or ''
+                            people_count = item[4] or 0
+                            days_count = item[5] or 0
+                            rate = item[6] or 0
+                            
+                            # Форматируем вывод
+                            if category == "Проезд":
+                                html_content += f"""
+            <tr>
+                <td></td>
+                <td style="padding-left: 30px;">{category}</td>
+                <td>{html.escape(description)}</td>
+                <td>{days_count}</td>
+                <td>{rate:.0f}</td>
+                <td>{people_count}</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+"""
+                            elif category == "Проживание":
+                                html_content += f"""
+            <tr>
+                <td></td>
+                <td style="padding-left: 30px;">{category}</td>
+                <td>дн</td>
+                <td>{days_count}</td>
+                <td>{rate:.0f}</td>
+                <td>{people_count}</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+"""
+                            elif category == "Суточные":
+                                html_content += f"""
+            <tr>
+                <td></td>
+                <td style="padding-left: 30px;">{category}</td>
+                <td>дн</td>
+                <td>{days_count}</td>
+                <td>{rate:.0f}</td>
+                <td>{people_count}</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+"""
+            
+            # Внутренние мероприятия
+            if internal_events:
+                html_content += """
+            <tr style="background-color: #e6f3ff;">
+                <td colspan="11"><strong>2. ВНУТРЕННИЕ И ГОРОДСКИЕ МЕРОПРИЯТИЯ</strong></td>
+            </tr>
+"""
+                
+                for idx, event in enumerate(internal_events, 1):
+                    quarter = q_map.get(event.month, 1)
+                    q_vals = ['', '', '', '']
+                    q_vals[quarter-1] = f"{event.children_budget:.2f}"
+                    
+                    html_content += f"""
+            <tr>
+                <td>2.{idx}</td>
+                <td>{html.escape(event.name[:60])}</td>
+                <td>{html.escape(event.location)}</td>
+                <td>{html.escape(event.month)}</td>
+                <td></td>
+                <td></td>
+                <td>{event.children_budget:.2f}</td>
+                <td>{q_vals[0]}</td>
+                <td>{q_vals[1]}</td>
+                <td>{q_vals[2]}</td>
+                <td>{q_vals[3]}</td>
             </tr>
 """
             
