@@ -16,6 +16,7 @@ from import_csv_window import ImportCSVWindow
 from backup_window import BackupWindow
 from backup_manager import BackupManager
 from data_check_window import DataCheckWindow
+from estimate_window import EstimateWindow
 from constants import SPORTS, MONTHS
 from styles import FONT_FAMILY, MONOSPACE_FONT
 
@@ -271,6 +272,10 @@ class MainWindow:
         edit_menu.add_command(
             label="✏️ Уточнить детали", 
             command=self._clarify_event
+        )
+        edit_menu.add_command(
+            label="📋 Сметы (выездные)", 
+            command=self._manage_estimates
         )
         
         # Меню "Отчёты"
@@ -538,6 +543,24 @@ class MainWindow:
         )
         clarify_btn.pack(side=tk.LEFT, padx=15)
         make_hover(clarify_btn, self.colors['accent'], '#E55D00')
+        
+        # Кнопка "Сметы" для выездных мероприятий
+        estimates_btn = tk.Button(
+            button_frame,
+            text="📋 СМЕТЫ",
+            command=self._manage_estimates,
+            bg=self.colors['primary'],
+            fg=self.colors['white'],
+            font=(FONT_FAMILY, 11, 'bold'),
+            relief='flat',
+            cursor='hand2',
+            padx=20,
+            pady=10,
+            activebackground=self.colors['primary_dark'],
+            activeforeground=self.colors['white']
+        )
+        estimates_btn.pack(side=tk.LEFT, padx=5)
+        make_hover(estimates_btn, self.colors['primary'], self.colors['primary_dark'])
         
         # Остальные функции доступны через меню
         
@@ -850,6 +873,36 @@ class MainWindow:
         
         event = Event.from_db_row(event_data)
         ClarifyEventWindow(self.root, self.db, event, callback=self._reload_all)
+    
+    def _manage_estimates(self):
+        """Открыть окно управления сметами для выбранного мероприятия"""
+        selection = self.tree.selection()
+        if not selection:
+            messagebox.showwarning("Предупреждение", "Выберите мероприятие для создания смет")
+            return
+        
+        # Получаем ID мероприятия
+        item = selection[0]
+        tags = self.tree.item(item, 'tags')
+        event_id = int(tags[0])
+        
+        # Получаем данные мероприятия из БД
+        event_data = self.db.get_event_by_id(event_id)
+        if not event_data:
+            messagebox.showerror("Ошибка", "Мероприятие не найдено")
+            return
+        
+        event = Event.from_db_row(event_data)
+        
+        # Проверяем, что это выездное мероприятие
+        if event.event_type != "Выездное":
+            messagebox.showinfo("Информация", 
+                              "Сметы создаются только для выездных мероприятий.\n\n" +
+                              f"Выбранное мероприятие: {event.event_type}")
+            return
+        
+        # Открываем окно управления сметами
+        EstimateWindow(self.root, self.db, event)
     
     def _delete_event(self):
         """Удалить выбранное мероприятие"""

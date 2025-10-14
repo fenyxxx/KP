@@ -55,6 +55,39 @@ class Database:
                 postponement_reason TEXT
             )
         ''')
+        
+        # Таблица смет
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS estimates (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER NOT NULL,
+                estimate_type TEXT NOT NULL,
+                trainer_name TEXT,
+                approved_by TEXT,
+                place TEXT,
+                start_date TEXT,
+                end_date TEXT,
+                created_date TEXT,
+                total_amount REAL DEFAULT 0,
+                FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+            )
+        ''')
+        
+        # Таблица статей расходов смет
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS estimate_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                estimate_id INTEGER NOT NULL,
+                category TEXT NOT NULL,
+                description TEXT,
+                people_count INTEGER DEFAULT 0,
+                days_count INTEGER DEFAULT 0,
+                rate REAL DEFAULT 0,
+                total REAL DEFAULT 0,
+                FOREIGN KEY (estimate_id) REFERENCES estimates(id) ON DELETE CASCADE
+            )
+        ''')
+        
         self.connection.commit()
         
         # Добавляем новые столбцы если таблица уже существует
@@ -320,6 +353,160 @@ class Database:
                 id
         ''', (year,))
         return self.cursor.fetchall()
+    
+    # ==================== МЕТОДЫ ДЛЯ РАБОТЫ СО СМЕТАМИ ====================
+    
+    def create_estimate(self, event_id: int, estimate_type: str, trainer_name: str = None,
+                       approved_by: str = "", place: str = "", start_date: str = "",
+                       end_date: str = "") -> int:
+        """
+        Создать новую смету
+        
+        Args:
+            event_id: ID мероприятия
+            estimate_type: Тип сметы ('ППО' или 'УЭВП')
+            trainer_name: ФИО тренера (только для смет УЭВП)
+            approved_by: Кто утверждает
+            place: Место проведения
+            start_date: Дата начала
+            end_date: Дата окончания
+            
+        Returns:
+            ID созданной сметы
+        """
+        self.cursor.execute('''
+            INSERT INTO estimates (event_id, estimate_type, trainer_name, approved_by,
+                                 place, start_date, end_date, created_date, total_amount)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+        ''', (event_id, estimate_type, trainer_name, approved_by, place, start_date,
+              end_date, datetime.now().isoformat()))
+        self.connection.commit()
+        return self.cursor.lastrowid
+    
+    def update_estimate(self, estimate_id: int, trainer_name: str = None,
+                       approved_by: str = "", place: str = "", start_date: str = "",
+                       end_date: str = ""):
+        """Обновить данные сметы"""
+        self.cursor.execute('''
+            UPDATE estimates
+            SET trainer_name = ?, approved_by = ?, place = ?, start_date = ?, end_date = ?
+            WHERE id = ?
+        ''', (trainer_name, approved_by, place, start_date, end_date, estimate_id))
+        self.connection.commit()
+    
+    def get_estimates_by_event(self, event_id: int) -> List[tuple]:
+        """Получить все сметы для мероприятия"""
+        self.cursor.execute('''
+            SELECT id, event_id, estimate_type, trainer_name, approved_by,
+                   place, start_date, end_date, created_date, total_amount
+            FROM estimates
+            WHERE event_id = ?
+            ORDER BY estimate_type, trainer_name
+        ''', (event_id,))
+        return self.cursor.fetchall()
+    
+    def get_estimate(self, estimate_id: int) -> Optional[tuple]:
+        """Получить смету по ID"""
+        self.cursor.execute('''
+            SELECT id, event_id, estimate_type, trainer_name, approved_by,
+                   place, start_date, end_date, created_date, total_amount
+            FROM estimates
+            WHERE id = ?
+        ''', (estimate_id,))
+        return self.cursor.fetchone()
+    
+    def delete_estimate(self, estimate_id: int):
+        """Удалить смету (каскадно удалятся и статьи расходов)"""
+        self.cursor.execute('DELETE FROM estimates WHERE id = ?', (estimate_id,))
+        self.connection.commit()
+    
+    def add_estimate_item(self, estimate_id: int, category: str, description: str = "",
+                         people_count: int = 0, days_count: int = 0, rate: float = 0):
+        """
+        Добавить статью расходов в смету
+        
+        Args:
+            estimate_id: ID сметы
+            category: Категория (Проезд, Проживание, Суточные, Питание)
+            description: Описание/маршрут
+            people_count: Количество человек
+            days_count: Количество дней
+            rate: Ставка
+        """
+        total = people_count * days_count * rate
+        self.cursor.execute('''
+            INSERT INTO estimate_items (estimate_id, category, description, 
+                                       people_count, days_count, rate, total)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (estimate_id, category, description, people_count, days_count, rate, total))
+        self.connection.commit()
+        
+        # Обновляем общую сумму сметы
+        self._update_estimate_total(estimate_id)
+        
+        return self.cursor.lastrowid
+    
+    def update_estimate_item(self, item_id: int, category: str, description: str = "",
+                            people_count: int = 0, days_count: int = 0, rate: float = 0):
+        """Обновить статью расходов"""
+        total = people_count * days_count * rate
+        self.cursor.execute('''
+            UPDATE estimate_items
+            SET category = ?, description = ?, people_count = ?, 
+                days_count = ?, rate = ?, total = ?
+            WHERE id = ?
+        ''', (category, description, people_count, days_count, rate, total, item_id))
+        self.connection.commit()
+        
+        # Получаем estimate_id для обновления общей суммы
+        self.cursor.execute('SELECT estimate_id FROM estimate_items WHERE id = ?', (item_id,))
+        row = self.cursor.fetchone()
+        if row:
+            self._update_estimate_total(row[0])
+    
+    def get_estimate_items(self, estimate_id: int) -> List[tuple]:
+        """Получить все статьи расходов сметы"""
+        self.cursor.execute('''
+            SELECT id, estimate_id, category, description, people_count, 
+                   days_count, rate, total
+            FROM estimate_items
+            WHERE estimate_id = ?
+            ORDER BY 
+                CASE category
+                    WHEN 'Проезд' THEN 1
+                    WHEN 'Проживание' THEN 2
+                    WHEN 'Суточные' THEN 3
+                    WHEN 'Питание' THEN 4
+                    ELSE 5
+                END
+        ''', (estimate_id,))
+        return self.cursor.fetchall()
+    
+    def delete_estimate_item(self, item_id: int):
+        """Удалить статью расходов"""
+        # Сначала получаем estimate_id
+        self.cursor.execute('SELECT estimate_id FROM estimate_items WHERE id = ?', (item_id,))
+        row = self.cursor.fetchone()
+        
+        self.cursor.execute('DELETE FROM estimate_items WHERE id = ?', (item_id,))
+        self.connection.commit()
+        
+        # Обновляем общую сумму сметы
+        if row:
+            self._update_estimate_total(row[0])
+    
+    def _update_estimate_total(self, estimate_id: int):
+        """Обновить общую сумму сметы"""
+        self.cursor.execute('''
+            UPDATE estimates
+            SET total_amount = (
+                SELECT COALESCE(SUM(total), 0)
+                FROM estimate_items
+                WHERE estimate_id = ?
+            )
+            WHERE id = ?
+        ''', (estimate_id, estimate_id))
+        self.connection.commit()
     
     def close(self):
         """Закрыть соединение с БД"""

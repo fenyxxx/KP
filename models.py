@@ -137,3 +137,123 @@ class Event:
         """Строковое представление мероприятия"""
         return f"{self.name} ({self.sport}, {self.month} {self.year})"
 
+
+class Estimate:
+    """Класс модели сметы"""
+    
+    def __init__(self, estimate_id: int = None, event_id: int = None,
+                 estimate_type: str = "", trainer_name: str = None,
+                 approved_by: str = "", place: str = "", start_date: str = "",
+                 end_date: str = "", created_date: str = None, total_amount: float = 0.0):
+        """
+        Инициализация сметы
+        
+        Args:
+            estimate_id: ID сметы
+            event_id: ID мероприятия
+            estimate_type: Тип сметы ('ППО' или 'УЭВП')
+            trainer_name: ФИО тренера (для смет УЭВП)
+            approved_by: Кто утверждает
+            place: Место проведения
+            start_date: Дата начала
+            end_date: Дата окончания
+            created_date: Дата создания
+            total_amount: Общая сумма сметы
+        """
+        self.id = estimate_id
+        self.event_id = event_id
+        self.estimate_type = estimate_type
+        self.trainer_name = trainer_name
+        self.approved_by = approved_by
+        self.place = place
+        self.start_date = start_date
+        self.end_date = end_date
+        self.created_date = created_date
+        self.total_amount = total_amount
+        self.items = []  # Список статей расходов
+    
+    @classmethod
+    def from_db_row(cls, row: tuple):
+        """
+        Создать объект Estimate из строки БД
+        
+        Args:
+            row: Кортеж с данными из БД
+            
+        Returns:
+            Объект Estimate
+        """
+        return cls(
+            estimate_id=row[0],
+            event_id=row[1],
+            estimate_type=row[2],
+            trainer_name=row[3],
+            approved_by=row[4],
+            place=row[5],
+            start_date=row[6],
+            end_date=row[7],
+            created_date=row[8],
+            total_amount=row[9]
+        )
+    
+    def __str__(self):
+        """Строковое представление сметы"""
+        if self.estimate_type == 'УЭВП' and self.trainer_name:
+            return f"Смета УЭВП - {self.trainer_name}"
+        return f"Смета {self.estimate_type}"
+
+
+class EstimateItem:
+    """Класс модели статьи расходов сметы"""
+    
+    def __init__(self, item_id: int = None, estimate_id: int = None,
+                 category: str = "", description: str = "",
+                 people_count: int = 0, days_count: int = 0,
+                 rate: float = 0.0, total: float = 0.0):
+        """
+        Инициализация статьи расходов
+        
+        Args:
+            item_id: ID статьи расходов
+            estimate_id: ID сметы
+            category: Категория (Проезд, Проживание, Суточные, Питание)
+            description: Описание/маршрут
+            people_count: Количество человек
+            days_count: Количество дней
+            rate: Ставка
+            total: Итоговая сумма
+        """
+        self.id = item_id
+        self.estimate_id = estimate_id
+        self.category = category
+        self.description = description
+        self.people_count = people_count
+        self.days_count = days_count
+        self.rate = rate
+        self.total = total
+    
+    @classmethod
+    def from_db_row(cls, row: tuple):
+        """
+        Создать объект EstimateItem из строки БД
+        
+        Args:
+            row: Кортеж с данными из БД
+            
+        Returns:
+            Объект EstimateItem
+        """
+        return cls(
+            item_id=row[0],
+            estimate_id=row[1],
+            category=row[2],
+            description=row[3],
+            people_count=row[4],
+            days_count=row[5],
+            rate=row[6],
+            total=row[7]
+        )
+    
+    def __str__(self):
+        """Строковое представление статьи расходов"""
+        return f"{self.category}: {self.total:.2f} руб."
