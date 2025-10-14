@@ -250,17 +250,6 @@ class EstimateWindow:
             margin: 0;
             padding: 20px;
         }}
-        .header {{
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 30px;
-        }}
-        .header div {{
-            flex: 1;
-        }}
-        .header .right {{
-            text-align: right;
-        }}
         .center {{
             text-align: center;
             font-weight: bold;
@@ -284,33 +273,9 @@ class EstimateWindow:
             font-weight: bold;
             text-align: right;
         }}
-        .footer {{
-            margin-top: 40px;
-        }}
-        .signature {{
-            display: flex;
-            justify-content: space-between;
-            margin-top: 20px;
-        }}
     </style>
 </head>
 <body>
-    <div class="header">
-        <div>
-            <strong>Утверждаю</strong><br>
-            {html.escape(estimate.approved_by or "Зам. начальника ф УЭВП по СОиКМР" if estimate.estimate_type == "УЭВП" else "Председатель ППО Газпром добыча Ямбург профсоюз")}<br>
-            __________________<br>
-            {datetime.now().year} г.
-        </div>
-        <div class="right">
-            <strong>Утверждаю</strong><br>
-            {"Председатель ППО" if estimate.estimate_type == "УЭВП" else "Зам. начальника ф УЭВП"}<br>
-            {"Газпром добыча Ямбург профсоюз" if estimate.estimate_type == "УЭВП" else ""}<br>
-            __________________<br>
-            {datetime.now().year} г.
-        </div>
-    </div>
-    
     <div class="center">
         СМЕТА<br>
         командировочных расходов {'тренера' if estimate.estimate_type == 'УЭВП' else ''} для сопровождения спортсменов ДЮСК "Ямбург",<br>
@@ -376,17 +341,6 @@ class EstimateWindow:
             </tr>
         </tbody>
     </table>
-    
-    <div class="footer">
-        <div class="signature">
-            <div>
-                Заместитель начальника ДЮСК "Ямбург"
-            </div>
-            <div>
-                А.С. Вдовикин
-            </div>
-        </div>
-    </div>
 </body>
 </html>
 """

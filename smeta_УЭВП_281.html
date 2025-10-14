@@ -1,0 +1,159 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Смета - УЭВП</title>
+    <style>
+        @page { size: A4; margin: 10mm; }
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 14px;
+            margin: 0;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        .header div {
+            flex: 1;
+        }
+        .header .right {
+            text-align: right;
+        }
+        .center {
+            text-align: center;
+            font-weight: bold;
+            margin: 30px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        .total {
+            font-weight: bold;
+            text-align: right;
+        }
+        .footer {
+            margin-top: 40px;
+        }
+        .signature {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <strong>Утверждаю</strong><br>
+            Зам. начальника ф УЭВП по СОиКМР<br>
+            __________________<br>
+            2025 г.
+        </div>
+        <div class="right">
+            <strong>Утверждаю</strong><br>
+            Председатель ППО<br>
+            Газпром добыча Ямбург профсоюз<br>
+            __________________<br>
+            2025 г.
+        </div>
+    </div>
+    
+    <div class="center">
+        СМЕТА<br>
+        командировочных расходов тренера для сопровождения спортсменов ДЮСК "Ямбург",<br>
+        Турнир памяти Манжура
+    </div>
+    
+    <p><strong>Место проведения:</strong> г. Надым</p>
+    <p><strong>Сроки проведения:</strong>  - </p>
+    <p><strong>тренер:</strong> тренер 1</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>№</th>
+                <th>Наименование расходов</th>
+                <th>Кол-во чел.</th>
+                <th>Дни/Стороны</th>
+                <th>Ставка, руб.</th>
+                <th>Сумма, руб.</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td><strong>1.</strong></td>
+                <td colspan="5"><strong>Проезд</strong></td>
+            </tr>
+
+            <tr>
+                <td></td>
+                <td>маршрут: г. Надым</td>
+                <td style="text-align: center;">1</td>
+                <td style="text-align: center;">2</td>
+                <td style="text-align: right;">3,225.00</td>
+                <td style="text-align: right;">6,450.00</td>
+            </tr>
+
+            <tr>
+                <td><strong>2.</strong></td>
+                <td colspan="5"><strong>Проживание</strong></td>
+            </tr>
+
+            <tr>
+                <td></td>
+                <td></td>
+                <td style="text-align: center;">1</td>
+                <td style="text-align: center;">5</td>
+                <td style="text-align: right;">1,290.00</td>
+                <td style="text-align: right;">6,450.00</td>
+            </tr>
+
+            <tr>
+                <td><strong>3.</strong></td>
+                <td colspan="5"><strong>Суточные</strong></td>
+            </tr>
+
+            <tr>
+                <td></td>
+                <td>по территории (500 руб/день)</td>
+                <td style="text-align: center;">1</td>
+                <td style="text-align: center;">5</td>
+                <td style="text-align: right;">500.00</td>
+                <td style="text-align: right;">2,500.00</td>
+            </tr>
+
+            <tr class="total">
+                <td colspan="5">ИТОГО по смете:</td>
+                <td style="text-align: right;">15,400.00</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <div class="footer">
+        <div class="signature">
+            <div>
+                Заместитель начальника ДЮСК "Ямбург"
+            </div>
+            <div>
+                А.С. Вдовикин
+            </div>
+        </div>
+    </div>
+</body>
+</html>
