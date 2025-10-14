@@ -112,9 +112,6 @@ class EstimateWindow:
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        # Двойной клик для редактирования
-        self.tree.bind('<Double-1>', lambda e: self._edit_selected_estimate())
-        
         # Кнопки действий
         action_frame = ttk.Frame(self.window, padding="10")
         action_frame.pack(fill=tk.X)

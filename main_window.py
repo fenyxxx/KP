@@ -283,8 +283,35 @@ class MainWindow:
         menubar.add_cascade(label="Отчёты", menu=reports_menu)
         
         reports_menu.add_command(
-            label="Посмотреть отчёты", 
+            label="📊 Все отчёты...", 
             command=self._view_plan
+        )
+        reports_menu.add_separator()
+        
+        # Быстрый доступ к отчётам
+        reports_menu.add_command(
+            label="📈 По видам спорта",
+            command=lambda: self._open_report_direct('by_sport')
+        )
+        reports_menu.add_command(
+            label="📅 По месяцам",
+            command=lambda: self._open_report_direct('by_month')
+        )
+        reports_menu.add_command(
+            label="🏆 По типам мероприятий",
+            command=lambda: self._open_report_direct('by_event_type')
+        )
+        reports_menu.add_command(
+            label="✅ По статусам",
+            command=lambda: self._open_report_direct('by_status')
+        )
+        reports_menu.add_command(
+            label="👥 По тренерам",
+            command=lambda: self._open_report_direct('by_trainers')
+        )
+        reports_menu.add_command(
+            label="💰 По типам мероприятий (Выездные/Внутренние)",
+            command=lambda: self._open_report_direct('by_type')
         )
         
         # Меню "Просмотр"
@@ -1007,6 +1034,22 @@ class MainWindow:
             return
         
         ViewPlanWindow(self.root, self.db, year)
+    
+    def _open_report_direct(self, report_type: str):
+        """
+        Открыть окно с конкретным типом отчёта
+        
+        Args:
+            report_type: Тип отчёта (by_sport, by_month, by_event_type, by_status, by_trainers, by_type)
+        """
+        year = self.selected_year.get()
+        events_data = self.db.get_events_by_year(year)
+        
+        if not events_data:
+            messagebox.showinfo("Информация", f"Нет мероприятий на {year} год")
+            return
+        
+        ViewPlanWindow(self.root, self.db, year, initial_report_type=report_type)
     
     def _check_data(self):
         """Открыть окно проверки целостности данных"""

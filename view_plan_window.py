@@ -61,7 +61,7 @@ def format_number(amount):
 class ViewPlanWindow:
     """Класс окна для просмотра календарного плана"""
     
-    def __init__(self, parent, db, year: int):
+    def __init__(self, parent, db, year: int, initial_report_type: str = 'full'):
         """
         Инициализация окна
         
@@ -69,11 +69,12 @@ class ViewPlanWindow:
             parent: Родительское окно
             db: Объект базы данных
             year: Год для отображения
+            initial_report_type: Начальный тип отчёта для отображения
         """
         self.parent = parent
         self.db = db
         self.year = year
-        self.current_report_type = 'full'  # Текущий тип отчёта
+        self.current_report_type = initial_report_type  # Текущий тип отчёта
         
         # Создаем окно
         self.window = tk.Toplevel(parent)
@@ -87,7 +88,7 @@ class ViewPlanWindow:
         self.window.protocol("WM_DELETE_WINDOW", self.window.destroy)
         
         self._create_widgets()
-        self._show_report('full')  # По умолчанию показываем полный план
+        self._show_report(initial_report_type)  # Показываем указанный тип отчёта
     
     def _create_widgets(self):
         """Создать виджеты окна"""
