@@ -61,6 +61,7 @@ class EstimateGenerator:
     def generate_ppo_estimate(db, event, children_budget):
         """
         Создать смету на ППО (для детей) по шаблону
+        ТОЧНО соответствует заложенному бюджету (100%)
         
         Args:
             db: Объект базы данных
@@ -94,38 +95,78 @@ class EstimateGenerator:
         
         # Примерное количество детей (по умолчанию 10-15)
         people_count = 12
+        days_командировки = 5
+        days_proezd = 2  # туда и обратно
         
         # Определяем ставку суточных в зависимости от региона
         daily_rate = EstimateGenerator.get_daily_rate(event.location)
         
-        # Примерное количество дней командировки
-        days_командировки = 5
+        # МИНИМАЛЬНЫЕ ТРЕБОВАНИЯ:
+        min_prozhivanie_per_person = 1000  # минимум 1000 руб на проживание
+        min_proezd_per_person = 300  # минимум 300 руб на человека за проезд
         
-        # Рассчитываем сумму на суточные
-        sutochnie_budget = people_count * days_командировки * daily_rate
+        # Рассчитываем минимально необходимую сумму
+        min_prozhivanie_total = min_prozhivanie_per_person * people_count
+        min_proezd_total = min_proezd_per_person * people_count * days_proezd
         
-        # Остаток бюджета делим между проездом и проживанием
-        remaining_budget = children_budget - sutochnie_budget
+        # Пробуем с суточными
+        sutochnie_total = people_count * days_командировки * daily_rate
+        total_with_sutochnie = min_prozhivanie_total + min_proezd_total + sutochnie_total
         
-        if remaining_budget > 0:
-            # 50% на проезд, 50% на проживание
-            proezd_budget = remaining_budget * 0.5
-            prozhivanie_budget = remaining_budget * 0.5
+        use_sutochnie = True
+        
+        if total_with_sutochnie > children_budget:
+            # Не хватает денег - убираем суточные
+            use_sutochnie = False
+            sutochnie_total = 0
+        
+        # Распределяем бюджет
+        if use_sutochnie:
+            # С суточными
+            remaining = children_budget - sutochnie_total
+            
+            # Проверяем минимумы
+            if remaining >= (min_prozhivanie_total + min_proezd_total):
+                # Можем соблюсти минимумы, делим остаток 50/50
+                proezd_total = remaining * 0.5
+                prozhivanie_total = remaining - proezd_total  # Для точности
+                
+                # Проверяем минимумы еще раз
+                if proezd_total < min_proezd_total:
+                    proezd_total = min_proezd_total
+                    prozhivanie_total = remaining - proezd_total
+                elif prozhivanie_total < min_prozhivanie_total:
+                    prozhivanie_total = min_prozhivanie_total
+                    proezd_total = remaining - prozhivanie_total
+            else:
+                # Выделяем минимумы
+                proezd_total = min_proezd_total
+                prozhivanie_total = remaining - proezd_total
         else:
-            # Если суточные превышают весь бюджет, корректируем
-            sutochnie_budget = children_budget * 0.4
-            proezd_budget = children_budget * 0.3
-            prozhivanie_budget = children_budget * 0.3
-            # Пересчитываем дни командировки исходя из скорректированного бюджета
-            days_командировки = int(sutochnie_budget / (people_count * daily_rate)) if people_count > 0 else 5
-            if days_командировки < 1:
-                days_командировки = 1
+            # Без суточных - весь бюджет на проезд и проживание
+            if children_budget >= (min_prozhivanie_total + min_proezd_total):
+                # Делим 50/50
+                proezd_total = children_budget * 0.5
+                prozhivanie_total = children_budget - proezd_total
+                
+                # Проверяем минимумы
+                if proezd_total < min_proezd_total:
+                    proezd_total = min_proezd_total
+                    prozhivanie_total = children_budget - proezd_total
+                elif prozhivanie_total < min_prozhivanie_total:
+                    prozhivanie_total = min_prozhivanie_total
+                    proezd_total = children_budget - prozhivanie_total
+            else:
+                # Выделяем минимумы по приоритету
+                proezd_total = min(min_proezd_total, children_budget * 0.4)
+                prozhivanie_total = children_budget - proezd_total
+        
+        # Рассчитываем ставки
+        rate_proezd = round(proezd_total / (people_count * days_proezd), 2)
+        rate_prozhivanie = round(prozhivanie_total / (people_count * days_командировки), 2)
         
         # ПРОЕЗД
-        # Обычно: количество детей * 2 стороны * ставка
-        days_proezd = 2  # туда и обратно
-        rate_proezd = EstimateGenerator.round_to_beautiful(proezd_budget / (people_count * days_proezd))
-        
+        actual_proezd = rate_proezd * people_count * days_proezd
         db.add_estimate_item(
             estimate_id,
             'Проезд',
@@ -135,9 +176,22 @@ class EstimateGenerator:
             rate=rate_proezd
         )
         
-        # ПРОЖИВАНИЕ
-        # Количество дней = дни командировки
-        rate_prozhivanie = EstimateGenerator.round_to_beautiful(prozhivanie_budget / (people_count * days_командировки))
+        # СУТОЧНЫЕ (если используются)
+        actual_sutochnie = 0
+        if use_sutochnie:
+            actual_sutochnie = daily_rate * people_count * days_командировки
+            db.add_estimate_item(
+                estimate_id,
+                'Суточные',
+                description=f"по территории ({daily_rate} руб/день)",
+                people_count=people_count,
+                days_count=days_командировки,
+                rate=daily_rate
+            )
+        
+        # ПРОЖИВАНИЕ - корректируем для ТОЧНОГО попадания в бюджет
+        prozhivanie_corrected = children_budget - actual_proezd - actual_sutochnie
+        rate_prozhivanie_corrected = round(prozhivanie_corrected / (people_count * days_командировки), 2)
         
         db.add_estimate_item(
             estimate_id,
@@ -145,18 +199,7 @@ class EstimateGenerator:
             description="",
             people_count=people_count,
             days_count=days_командировки,
-            rate=rate_prozhivanie
-        )
-        
-        # СУТОЧНЫЕ
-        # Используем фиксированную ставку в зависимости от региона
-        db.add_estimate_item(
-            estimate_id,
-            'Суточные',
-            description=f"по территории ({daily_rate} руб/день)",
-            people_count=people_count,
-            days_count=days_командировки,
-            rate=daily_rate
+            rate=rate_prozhivanie_corrected
         )
         
         return estimate_id
@@ -165,6 +208,7 @@ class EstimateGenerator:
     def generate_trainer_estimates(db, event, trainers_budget, trainers_count):
         """
         Создать сметы на тренеров (УЭВП) по шаблону
+        ТОЧНО соответствует заложенному бюджету (100%)
         
         Args:
             db: Объект базы данных
@@ -211,38 +255,74 @@ class EstimateGenerator:
                 end_date=""
             )
             
+            people_count = 1  # один тренер
+            days_командировки = 5
+            days_proezd = 2  # туда и обратно
+            
             # Определяем ставку суточных в зависимости от региона
             daily_rate = EstimateGenerator.get_daily_rate(event.location)
             
-            people_count = 1  # один тренер
+            # МИНИМАЛЬНЫЕ ТРЕБОВАНИЯ (на 1 человека):
+            min_prozhivanie_total = 1000 * people_count  # минимум 1000 руб
+            min_proezd_total = 300 * people_count * days_proezd  # минимум 300 руб за проезд
             
-            # Примерное количество дней командировки
-            days_командировки = 5
+            # Пробуем с суточными
+            sutochnie_total = people_count * days_командировки * daily_rate
+            total_with_sutochnie = min_prozhivanie_total + min_proezd_total + sutochnie_total
             
-            # Рассчитываем сумму на суточные (1 человек × дни × ставка)
-            sutochnie_budget = people_count * days_командировки * daily_rate
+            use_sutochnie = True
             
-            # Остаток бюджета делим между проездом и проживанием
-            remaining_budget = budget_per_trainer - sutochnie_budget
+            if total_with_sutochnie > budget_per_trainer:
+                # Не хватает денег - убираем суточные
+                use_sutochnie = False
+                sutochnie_total = 0
             
-            if remaining_budget > 0:
-                # 50% на проезд, 50% на проживание
-                proezd_budget = remaining_budget * 0.5
-                prozhivanie_budget = remaining_budget * 0.5
+            # Распределяем бюджет
+            if use_sutochnie:
+                # С суточными
+                remaining = budget_per_trainer - sutochnie_total
+                
+                # Проверяем минимумы
+                if remaining >= (min_prozhivanie_total + min_proezd_total):
+                    # Можем соблюсти минимумы, делим остаток 50/50
+                    proezd_total = remaining * 0.5
+                    prozhivanie_total = remaining - proezd_total  # Для точности
+                    
+                    # Проверяем минимумы еще раз
+                    if proezd_total < min_proezd_total:
+                        proezd_total = min_proezd_total
+                        prozhivanie_total = remaining - proezd_total
+                    elif prozhivanie_total < min_prozhivanie_total:
+                        prozhivanie_total = min_prozhivanie_total
+                        proezd_total = remaining - prozhivanie_total
+                else:
+                    # Выделяем минимумы
+                    proezd_total = min_proezd_total
+                    prozhivanie_total = remaining - proezd_total
             else:
-                # Если суточные превышают весь бюджет, корректируем
-                sutochnie_budget = budget_per_trainer * 0.35
-                proezd_budget = budget_per_trainer * 0.35
-                prozhivanie_budget = budget_per_trainer * 0.30
-                # Пересчитываем дни командировки исходя из скорректированного бюджета
-                days_командировки = int(sutochnie_budget / daily_rate) if daily_rate > 0 else 5
-                if days_командировки < 1:
-                    days_командировки = 1
+                # Без суточных - весь бюджет на проезд и проживание
+                if budget_per_trainer >= (min_prozhivanie_total + min_proezd_total):
+                    # Делим 50/50
+                    proezd_total = budget_per_trainer * 0.5
+                    prozhivanie_total = budget_per_trainer - proezd_total
+                    
+                    # Проверяем минимумы
+                    if proezd_total < min_proezd_total:
+                        proezd_total = min_proezd_total
+                        prozhivanie_total = budget_per_trainer - proezd_total
+                    elif prozhivanie_total < min_prozhivanie_total:
+                        prozhivanie_total = min_prozhivanie_total
+                        proezd_total = budget_per_trainer - prozhivanie_total
+                else:
+                    # Выделяем минимумы по приоритету
+                    proezd_total = min(min_proezd_total, budget_per_trainer * 0.4)
+                    prozhivanie_total = budget_per_trainer - proezd_total
+            
+            # Рассчитываем ставки
+            rate_proezd = round(proezd_total / (people_count * days_proezd), 2)
             
             # ПРОЕЗД
-            days_proezd = 2  # туда и обратно
-            rate_proezd = EstimateGenerator.round_to_beautiful(proezd_budget / (people_count * days_proezd))
-            
+            actual_proezd = rate_proezd * people_count * days_proezd
             db.add_estimate_item(
                 estimate_id,
                 'Проезд',
@@ -252,9 +332,22 @@ class EstimateGenerator:
                 rate=rate_proezd
             )
             
-            # ПРОЖИВАНИЕ
-            # Количество дней = дни командировки
-            rate_prozhivanie = EstimateGenerator.round_to_beautiful(prozhivanie_budget / (people_count * days_командировки))
+            # СУТОЧНЫЕ (если используются)
+            actual_sutochnie = 0
+            if use_sutochnie:
+                actual_sutochnie = daily_rate * people_count * days_командировки
+                db.add_estimate_item(
+                    estimate_id,
+                    'Суточные',
+                    description=f"по территории ({daily_rate} руб/день)",
+                    people_count=people_count,
+                    days_count=days_командировки,
+                    rate=daily_rate
+                )
+            
+            # ПРОЖИВАНИЕ - корректируем для ТОЧНОГО попадания в бюджет
+            prozhivanie_corrected = budget_per_trainer - actual_proezd - actual_sutochnie
+            rate_prozhivanie_corrected = round(prozhivanie_corrected / (people_count * days_командировки), 2)
             
             db.add_estimate_item(
                 estimate_id,
@@ -262,18 +355,7 @@ class EstimateGenerator:
                 description="",
                 people_count=people_count,
                 days_count=days_командировки,
-                rate=rate_prozhivanie
-            )
-            
-            # СУТОЧНЫЕ
-            # Используем фиксированную ставку в зависимости от региона (1 человек)
-            db.add_estimate_item(
-                estimate_id,
-                'Суточные',
-                description=f"по территории ({daily_rate} руб/день)",
-                people_count=people_count,
-                days_count=days_командировки,
-                rate=daily_rate
+                rate=rate_prozhivanie_corrected
             )
             
             estimate_ids.append(estimate_id)

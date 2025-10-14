@@ -706,6 +706,7 @@ class EstimateEditDialog:
             )
         
         # Добавляем статьи расходов
+        total_estimate = 0.0
         for item in self.items_tree.get_children():
             values = self.items_tree.item(item, 'values')
             self.db.add_estimate_item(
@@ -716,6 +717,44 @@ class EstimateEditDialog:
                 days_count=int(values[3]),
                 rate=float(values[4])
             )
+            # Суммируем итоговую сумму сметы
+            total_estimate += float(values[5])
+        
+        # ОБНОВЛЯЕМ БЮДЖЕТ МЕРОПРИЯТИЯ на основе сметы
+        if self.estimate_type == 'ППО':
+            # Обновляем бюджет на детей
+            cursor = self.db.connection.cursor()
+            cursor.execute("""
+                UPDATE events 
+                SET children_budget = ? 
+                WHERE id = ?
+            """, (total_estimate, self.event.id))
+            self.db.connection.commit()
+        elif self.estimate_type == 'УЭВП':
+            # Для УЭВП нужно пересчитать общий бюджет на тренеров
+            # Получаем все сметы УЭВП для этого мероприятия
+            cursor = self.db.connection.cursor()
+            cursor.execute("""
+                SELECT e.id FROM estimates e
+                WHERE e.event_id = ? AND e.estimate_type = 'УЭВП'
+            """, (self.event.id,))
+            uevp_estimates = cursor.fetchall()
+            
+            # Суммируем все сметы УЭВП
+            total_trainers_budget = 0.0
+            for est_row in uevp_estimates:
+                est_id = est_row[0]
+                items = self.db.get_estimate_items(est_id)
+                # Структура кортежа: (id, estimate_id, category, description, people_count, days_count, rate, total)
+                total_trainers_budget += sum(item[7] for item in items)  # total в индексе 7
+            
+            # Обновляем общий бюджет на тренеров
+            cursor.execute("""
+                UPDATE events 
+                SET trainers_budget = ? 
+                WHERE id = ?
+            """, (total_trainers_budget, self.event.id))
+            self.db.connection.commit()
         
         self.result = True
         self.window.destroy()
