@@ -82,6 +82,27 @@ class EstimateWindow:
         
         create_styled_button(
             button_frame,
+            "✏️ Редактировать",
+            self._edit_selected_estimate,
+            'secondary'
+        ).pack(side=tk.LEFT, padx=5)
+        
+        create_styled_button(
+            button_frame,
+            "🖨️ Печать",
+            self._print_selected_estimate,
+            'normal'
+        ).pack(side=tk.LEFT, padx=5)
+        
+        create_styled_button(
+            button_frame,
+            "🗑️ Удалить",
+            self._delete_selected_estimate,
+            'normal'
+        ).pack(side=tk.LEFT, padx=5)
+        
+        create_styled_button(
+            button_frame,
             "🔄 Обновить",
             self._load_estimates,
             'normal'
@@ -112,33 +133,12 @@ class EstimateWindow:
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        # Кнопки действий
-        action_frame = ttk.Frame(self.window, padding="10")
-        action_frame.pack(fill=tk.X)
+        # Кнопка закрытия внизу
+        close_frame = ttk.Frame(self.window, padding="10")
+        close_frame.pack(fill=tk.X)
         
         create_styled_button(
-            action_frame,
-            "✏️ Редактировать",
-            self._edit_selected_estimate,
-            'secondary'
-        ).pack(side=tk.LEFT, padx=5)
-        
-        create_styled_button(
-            action_frame,
-            "🖨️ Печать сметы",
-            self._print_selected_estimate,
-            'primary'
-        ).pack(side=tk.LEFT, padx=5)
-        
-        create_styled_button(
-            action_frame,
-            "🗑️ Удалить",
-            self._delete_selected_estimate,
-            'normal'
-        ).pack(side=tk.LEFT, padx=5)
-        
-        create_styled_button(
-            action_frame,
+            close_frame,
             "Закрыть",
             self.window.destroy,
             'normal'
