@@ -8,6 +8,7 @@ from tkinter import ttk, messagebox
 from constants import SPORTS, MONTHS, EVENT_TYPES, COACHES
 from models import Event
 from styles import apply_styles, COLORS, create_styled_button
+from estimate_generator import EstimateGenerator
 
 
 class AddEventWindow:
@@ -419,20 +420,31 @@ class AddEventWindow:
             trainers_list = None
         
         try:
+            event_id = None
+            
             if self.event and self.event.id:
                 # Обновляем существующее мероприятие (есть ID)
                 self.db.update_event(
                     self.event.id, self.year, sport, event_type, name, location,
                     month, children_budget, trainers_list=trainers_list, notes=notes
                 )
+                event_id = self.event.id
                 #messagebox.showinfo("Успешно", "Мероприятие обновлено")
             else:
                 # Создаем новое мероприятие (нет ID или event=None)
-                self.db.add_event(
+                event_id = self.db.add_event(
                     self.year, sport, event_type, name, location, month,
                     children_budget, trainers_list=trainers_list, notes=notes
                 )
                 #messagebox.showinfo("Успешно", "Мероприятие добавлено")
+                
+                # Автоматически создаём сметы для выездных мероприятий
+                if event_type == "Выездное":
+                    # Получаем созданное мероприятие
+                    event_data = self.db.get_event_by_id(event_id)
+                    if event_data:
+                        created_event = Event.from_db_row(event_data)
+                        EstimateGenerator.auto_generate_estimates(self.db, created_event)
             
             # Вызываем callback если он есть
             if self.callback:

@@ -447,6 +447,31 @@ class EstimateEditDialog:
         ttk.Label(info_frame, text=f"Мероприятие: {self.event.name}", font=(FONT_FAMILY, 11, 'bold')).pack(anchor='w')
         ttk.Label(info_frame, text=f"Место: {self.event.location}", font=(FONT_FAMILY, 9)).pack(anchor='w')
         
+        # Отображение заложенной суммы
+        budget_frame = tk.Frame(self.window, bg='#FFF3CD', relief='solid', bd=1, padx=10, pady=8)
+        budget_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        # Определяем заложенную сумму в зависимости от типа сметы
+        if self.estimate_type == 'ППО':
+            planned_budget = self.event.children_budget
+            budget_label = "Заложенная сумма на детей (ППО)"
+        else:  # УЭВП
+            # Для УЭВП - это сумма на одного тренера
+            if self.event.trainers_count > 0:
+                planned_budget = self.event.trainers_budget / self.event.trainers_count
+            else:
+                planned_budget = self.event.trainers_budget
+            budget_label = "Заложенная сумма на тренера (УЭВП)"
+        
+        self.planned_budget = planned_budget
+        
+        ttk.Label(
+            budget_frame,
+            text=f"💰 {budget_label}: {planned_budget:,.2f} руб.".replace(',', ' '),
+            font=(FONT_FAMILY, 10, 'bold'),
+            background='#FFF3CD'
+        ).pack(side=tk.LEFT)
+        
         # Основные данные сметы
         main_frame = ttk.LabelFrame(self.window, text=f"Смета {self.estimate_type}", padding="10")
         main_frame.pack(fill=tk.X, padx=10, pady=5)
@@ -519,12 +544,25 @@ class EstimateEditDialog:
         ttk.Button(items_btn_frame, text="✏️ Редактировать", command=self._edit_item).pack(side=tk.LEFT, padx=2)
         ttk.Button(items_btn_frame, text="🗑️ Удалить", command=self._delete_item).pack(side=tk.LEFT, padx=2)
         
-        # Итого
-        total_frame = ttk.Frame(self.window, padding="10")
-        total_frame.pack(fill=tk.X)
+        # Итого с индикацией превышения бюджета
+        total_frame = tk.Frame(self.window, bg='#E8F5E9', relief='solid', bd=1, padx=10, pady=10)
+        total_frame.pack(fill=tk.X, padx=10, pady=5)
         
-        self.total_label = ttk.Label(total_frame, text="ИТОГО: 0.00 руб.", font=(FONT_FAMILY, 12, 'bold'))
-        self.total_label.pack(side=tk.RIGHT)
+        self.total_label = tk.Label(
+            total_frame, 
+            text="ИТОГО: 0.00 руб.", 
+            font=(FONT_FAMILY, 12, 'bold'),
+            bg='#E8F5E9'
+        )
+        self.total_label.pack(side=tk.LEFT)
+        
+        self.budget_status_label = tk.Label(
+            total_frame,
+            text="",
+            font=(FONT_FAMILY, 10),
+            bg='#E8F5E9'
+        )
+        self.budget_status_label.pack(side=tk.LEFT, padx=20)
         
         # Кнопки сохранения/отмены
         button_frame = ttk.Frame(self.window, padding="10")
@@ -608,13 +646,28 @@ class EstimateEditDialog:
             self._update_total()
     
     def _update_total(self):
-        """Обновить итоговую сумму"""
+        """Обновить итоговую сумму с индикацией превышения бюджета"""
         total = 0.0
         for item in self.items_tree.get_children():
             values = self.items_tree.item(item, 'values')
             total += float(values[5])
         
         self.total_label.config(text=f"ИТОГО: {total:,.2f} руб.".replace(',', ' '))
+        
+        # Сравниваем с заложенным бюджетом
+        difference = self.planned_budget - total
+        
+        if abs(difference) < 0.01:  # Практически совпадает
+            status_text = "✅ Точно по плану!"
+            text_color = '#2E7D32'  # Темно-зеленый
+        elif difference > 0:  # Остались деньги
+            status_text = f"✅ Остаток: {difference:,.2f} руб.".replace(',', ' ')
+            text_color = '#2E7D32'  # Темно-зеленый
+        else:  # Превышение
+            status_text = f"⚠️ ПРЕВЫШЕНИЕ: {abs(difference):,.2f} руб.".replace(',', ' ')
+            text_color = '#D32F2F'  # Красный
+        
+        self.budget_status_label.config(text=status_text, fg=text_color)
     
     def _save(self):
         """Сохранить смету"""
