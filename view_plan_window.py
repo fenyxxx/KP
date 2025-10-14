@@ -1454,6 +1454,12 @@ class ViewPlanWindow:
         elif self.current_report_type == 'by_type':
             # Для отчета по типам - все события
             filtered_events = events
+        elif self.current_report_type == 'annual_ppo':
+            # Для годового отчета ППО - все события
+            filtered_events = events
+        elif self.current_report_type == 'annual_uevp':
+            # Для годового отчета УЭВП - только выездные
+            filtered_events = [e for e in events if e.event_type == "Выездное"]
         else:  # 'full'
             filtered_events = events
         
@@ -1616,6 +1622,56 @@ class ViewPlanWindow:
                                 f"{diff_t:.2f}"
                             ])
             
+            elif self.current_report_type == 'annual_ppo':
+                writer.writerow([
+                    '№', 'Тип', 'Название', 'Место', 'Месяц', 'Бюджет ППО', 'Квартал'
+                ])
+                
+                # Определяем квартал
+                q_map = {
+                    'Январь': 1, 'Февраль': 1, 'Март': 1,
+                    'Апрель': 2, 'Май': 2, 'Июнь': 2,
+                    'Июль': 3, 'Август': 3, 'Сентябрь': 3,
+                    'Октябрь': 4, 'Ноябрь': 4, 'Декабрь': 4
+                }
+                
+                for idx, event in enumerate(filtered_events, 1):
+                    quarter = q_map.get(event.month, 1)
+                    writer.writerow([
+                        idx,
+                        event.event_type,
+                        event.name,
+                        event.location,
+                        event.month,
+                        f"{event.children_budget:.2f}",
+                        quarter
+                    ])
+            
+            elif self.current_report_type == 'annual_uevp':
+                writer.writerow([
+                    '№', 'Название', 'Место', 'Месяц', 'Тренеров', 'Бюджет УЭВП', 'Квартал'
+                ])
+                
+                # Определяем квартал
+                q_map = {
+                    'Январь': 1, 'Февраль': 1, 'Март': 1,
+                    'Апрель': 2, 'Май': 2, 'Июнь': 2,
+                    'Июль': 3, 'Август': 3, 'Сентябрь': 3,
+                    'Октябрь': 4, 'Ноябрь': 4, 'Декабрь': 4
+                }
+                
+                for idx, event in enumerate(filtered_events, 1):
+                    quarter = q_map.get(event.month, 1)
+                    writer.writerow([
+                        idx,
+                        event.name,
+                        event.location,
+                        event.month,
+                        event.trainers_count,
+                        f"{event.trainers_budget:.2f}",
+                        quarter
+                    ])
+            
             else:  # 'full' и 'summary'
                 writer.writerow([
                     'ID', 'Месяц', 'Тип', 'Вид спорта', 'Название', 'Место',
@@ -1661,7 +1717,9 @@ class ViewPlanWindow:
             'sports': 'Отчёт по видам спорта',
             'status': 'Отчёт по статусам',
             'summary': 'Краткая сводка',
-            'by_type': 'Финансовый отчёт по типам мероприятий'
+            'by_type': 'Финансовый отчёт по типам мероприятий',
+            'annual_ppo': 'Годовой отчет ППО',
+            'annual_uevp': 'Годовой отчет УЭВП'
         }
         
         title = report_titles.get(self.current_report_type, 'Календарный план')
@@ -2034,7 +2092,97 @@ class ViewPlanWindow:
     </table>
 """
         
-        else:  # 'full'
+        elif self.current_report_type == 'annual_ppo':
+            # Годовой отчет ППО с разбивкой по кварталам
+            html_content += """
+    <table>
+        <thead>
+            <tr>
+                <th>№</th>
+                <th>Тип</th>
+                <th>Название</th>
+                <th>Место</th>
+                <th>Месяц</th>
+                <th>Бюджет ППО (₽)</th>
+                <th>Квартал</th>
+            </tr>
+        </thead>
+        <tbody>
+"""
+            
+            q_map = {
+                'Январь': 1, 'Февраль': 1, 'Март': 1,
+                'Апрель': 2, 'Май': 2, 'Июнь': 2,
+                'Июль': 3, 'Август': 3, 'Сентябрь': 3,
+                'Октябрь': 4, 'Ноябрь': 4, 'Декабрь': 4
+            }
+            
+            for idx, event in enumerate(events, 1):
+                quarter = q_map.get(event.month, 1)
+                html_content += f"""
+            <tr>
+                <td>{idx}</td>
+                <td>{html.escape(event.event_type)}</td>
+                <td>{html.escape(event.name)}</td>
+                <td>{html.escape(event.location)}</td>
+                <td>{html.escape(event.month)}</td>
+                <td>{event.children_budget:.2f}</td>
+                <td>{quarter}</td>
+            </tr>
+"""
+            
+            html_content += """
+        </tbody>
+    </table>
+"""
+        
+        elif self.current_report_type == 'annual_uevp':
+            # Годовой отчет УЭВП - только выездные
+            away_events = [e for e in events if e.event_type == "Выездное"]
+            
+            html_content += """
+    <table>
+        <thead>
+            <tr>
+                <th>№</th>
+                <th>Название</th>
+                <th>Место</th>
+                <th>Месяц</th>
+                <th>Тренеров</th>
+                <th>Бюджет УЭВП (₽)</th>
+                <th>Квартал</th>
+            </tr>
+        </thead>
+        <tbody>
+"""
+            
+            q_map = {
+                'Январь': 1, 'Февраль': 1, 'Март': 1,
+                'Апрель': 2, 'Май': 2, 'Июнь': 2,
+                'Июль': 3, 'Август': 3, 'Сентябрь': 3,
+                'Октябрь': 4, 'Ноябрь': 4, 'Декабрь': 4
+            }
+            
+            for idx, event in enumerate(away_events, 1):
+                quarter = q_map.get(event.month, 1)
+                html_content += f"""
+            <tr>
+                <td>{idx}</td>
+                <td>{html.escape(event.name)}</td>
+                <td>{html.escape(event.location)}</td>
+                <td>{html.escape(event.month)}</td>
+                <td>{event.trainers_count}</td>
+                <td>{event.trainers_budget:.2f}</td>
+                <td>{quarter}</td>
+            </tr>
+"""
+            
+            html_content += """
+        </tbody>
+    </table>
+"""
+        
+        else:  # 'full' and others
             html_content += """
     <table>
         <thead>
@@ -2081,8 +2229,11 @@ class ViewPlanWindow:
         
         # Итоги (для всех, кроме summary - у него свои итоги уже встроены)
         if self.current_report_type != 'summary':
-            total_children_plan = sum(e.children_budget for e in events)
-            total_trainers_plan = sum(e.trainers_budget for e in events)
+            # Для годового отчета УЭВП используем только выездные события
+            events_for_totals = [e for e in events if e.event_type == "Выездное"] if self.current_report_type == 'annual_uevp' else events
+            
+            total_children_plan = sum(e.children_budget for e in events_for_totals)
+            total_trainers_plan = sum(e.trainers_budget for e in events_for_totals)
             
             # Для финансового отчёта показываем план, факт и остаток
             if self.current_report_type == 'financial':
@@ -2120,6 +2271,24 @@ class ViewPlanWindow:
             Остаток: {format_rubles(abs(ostatok_trainers))} 
             ({'экономия' if ostatok_trainers > 0 else 'перерасход' if ostatok_trainers < 0 else 'по плану'})
         </p>
+    </div>
+"""
+            elif self.current_report_type == 'annual_ppo':
+                # Для годового отчета ППО - только ППО
+                html_content += f"""
+    <div class="summary">
+        <h3>Итоги</h3>
+        <p><strong>Всего мероприятий:</strong> {len(events_for_totals)}</p>
+        <p><strong>Бюджет на детей (ППО "Газпром добыча Ямбург профсоюз"):</strong> {format_rubles(total_children_plan)}</p>
+    </div>
+"""
+            elif self.current_report_type == 'annual_uevp':
+                # Для годового отчета УЭВП - только УЭВП
+                html_content += f"""
+    <div class="summary">
+        <h3>Итоги</h3>
+        <p><strong>Всего выездных мероприятий:</strong> {len(events_for_totals)}</p>
+        <p><strong>Бюджет на тренеров (ф. УЭВП ООО "Газпром добыча Ямбург"):</strong> {format_rubles(total_trainers_plan)}</p>
     </div>
 """
             else:
