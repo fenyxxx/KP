@@ -58,6 +58,45 @@ class EstimateGenerator:
             return round(value / 100) * 100
     
     @staticmethod
+    def get_realistic_params(event):
+        """
+        Получить реалистичные параметры (дни и количество детей) в зависимости от вида спорта
+        
+        Args:
+            event: Объект мероприятия
+            
+        Returns:
+            (days, people_count) - количество дней и детей
+        """
+        import random
+        
+        # Количество дней от 1 до 7 (зависит от хэша названия для стабильности)
+        hash_val = hash(event.name + event.location) % 100
+        days = 1 + (hash_val % 7)  # от 1 до 7
+        
+        # Командные виды спорта
+        team_sports = ['Футзал', 'Волейбол', 'Баскетбол', 'Гандбол']
+        
+        sport_upper = event.sport.upper()
+        is_team_sport = any(sport.upper() in sport_upper for sport in team_sports)
+        
+        if is_team_sport:
+            # Командные виды: от 6 до 14 человек
+            min_people = 6
+            max_people = 14
+        else:
+            # Остальные виды: от 1 до 14 человек
+            min_people = 1
+            max_people = 14
+        
+        # Используем хэш для стабильного случайного значения
+        hash_people = hash(event.name + str(event.id)) % 100
+        people_range = max_people - min_people + 1
+        people_count = min_people + (hash_people % people_range)
+        
+        return days, people_count
+    
+    @staticmethod
     def generate_ppo_estimate(db, event, children_budget):
         """
         Создать смету на ППО (для детей) по шаблону
@@ -93,9 +132,8 @@ class EstimateGenerator:
             end_date=""
         )
         
-        # Примерное количество детей (по умолчанию 10-15)
-        people_count = 12
-        days_командировки = 5
+        # Получаем реалистичные параметры
+        days_командировки, people_count = EstimateGenerator.get_realistic_params(event)
         days_proezd = 2  # туда и обратно
         
         # Определяем ставку суточных в зависимости от региона
@@ -256,7 +294,8 @@ class EstimateGenerator:
             )
             
             people_count = 1  # один тренер
-            days_командировки = 5
+            # Используем те же дни, что и для детей
+            days_командировки, _ = EstimateGenerator.get_realistic_params(event)
             days_proezd = 2  # туда и обратно
             
             # Определяем ставку суточных в зависимости от региона
