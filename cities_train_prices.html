@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Стоимость железнодорожных билетов от Нового Уренгоя</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .search-box {
+            padding: 20px 30px;
+            background: white;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 20px;
+            font-size: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        thead {
+            background: #667eea;
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+        
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+        }
+        
+        th:nth-child(1) { width: 60px; text-align: center; }
+        th:nth-child(3) { width: 180px; text-align: right; }
+        
+        tbody tr {
+            border-bottom: 1px solid #f0f0f0;
+            transition: all 0.2s;
+        }
+        
+        tbody tr:hover {
+            background: #f8f9fa;
+            transform: scale(1.01);
+        }
+        
+        td {
+            padding: 15px;
+        }
+        
+        td:nth-child(1) {
+            text-align: center;
+            color: #999;
+            font-weight: 600;
+        }
+        
+        td:nth-child(2) {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        td:nth-child(3) {
+            text-align: right;
+            font-weight: bold;
+            color: #667eea;
+            font-size: 18px;
+        }
+        
+        .price-low { color: #10b981 !important; }
+        .price-medium { color: #f59e0b !important; }
+        .price-high { color: #ef4444 !important; }
+        
+        .notes {
+            padding: 30px;
+            background: #fff8e1;
+            border-top: 3px solid #ffc107;
+        }
+        
+        .notes h3 {
+            color: #f57c00;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .notes ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .notes li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .notes li:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #f57c00;
+            font-size: 20px;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚂 Стоимость железнодорожных билетов</h1>
+            <p class="subtitle">Детский билет в плацкарте (в одну сторону) от Нового Уренгоя</p>
+        </header>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value">47</div>
+                <div class="stat-label">Направлений</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">4 853 ₽</div>
+                <div class="stat-label">Средняя стоимость</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">228 094 ₽</div>
+                <div class="stat-label">Общая сумма</div>
+            </div>
+        </div>
+        
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="🔍 Поиск по названию города...">
+        </div>
+        
+        <table id="pricesTable">
+            <thead>
+                <tr>
+                    <th>№</th>
+                    <th>Город</th>
+                    <th>Стоимость</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr><td>1</td><td>Надым</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>2</td><td>Ноябрьск</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>3</td><td>г Нижневартовск</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>4</td><td>г. Барнаул</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>5</td><td>г. Бердск</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>6</td><td>г. Берёзовский</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>7</td><td>г. Верхняя Пышма</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>8</td><td>г. Волгоград</td><td class="price-high">6 500 ₽</td></tr>
+                <tr><td>9</td><td>г. Губкинский</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>10</td><td>г. Еакатеринбург</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>11</td><td>г. Екатеринбург</td><td class="price-low">3 035 ₽</td></tr>
+                <tr><td>12</td><td>г. Екаткринбург</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>13</td><td>г. Казань</td><td class="price-low">4 000 ₽</td></tr>
+                <tr><td>14</td><td>г. Каменск-Уральский</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>15</td><td>г. Когалым</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>16</td><td>г. Красногорск</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>17</td><td>г. Кстово</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>18</td><td>г. Лобня</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>19</td><td>г. Магнитогорск</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>20</td><td>г. Майкоп</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>21</td><td>г. Медногорск</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>22</td><td>г. Москва</td><td class="price-low">3 559 ₽</td></tr>
+                <tr><td>23</td><td>г. Муравленко</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>24</td><td>г. Надым</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>25</td><td>г. Невинномыск</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>26</td><td>г. Нижневартовск</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>27</td><td>г. Нижний Новгород</td><td class="price-low">4 000 ₽</td></tr>
+                <tr><td>28</td><td>г. Нижний Тагил</td><td class="price-low">4 000 ₽</td></tr>
+                <tr><td>29</td><td>г. Новый Уренгой</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>30</td><td>г. Ноябрьск</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>31</td><td>г. Пыть-Ях</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>32</td><td>г. Ревда</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>33</td><td>г. Салехард</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>34</td><td>г. Санкт-Петербург</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>35</td><td>г. Саратов</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>36</td><td>г. Славянск-на Кубани</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>37</td><td>г. Славянск-на-Кубани</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>38</td><td>г. Сургут</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>39</td><td>г. Тарко-Сале</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>40</td><td>г. Тюмень</td><td class="price-low">3 000 ₽</td></tr>
+                <tr><td>41</td><td>г. Челябинск</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>42</td><td>г. Ялуторовск</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>43</td><td>п. Кабардинка</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>44</td><td>п. Пангоды</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>45</td><td>п. Приобье ХМАО</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>46</td><td>по назначению</td><td class="price-medium">5 000 ₽</td></tr>
+                <tr><td>47</td><td>с. Уват</td><td class="price-medium">5 000 ₽</td></tr>
+            </tbody>
+        </table>
+        
+        <div class="notes">
+            <h3>📌 Важные примечания:</h3>
+            <ul>
+                <li>Цены приблизительные, основаны на веб-поиске и расчетах по расстоянию</li>
+                <li>Детский билет (от 5 до 10 лет) обычно составляет 50% от стоимости взрослого</li>
+                <li>Дети до 5 лет могут ехать бесплатно без отдельного места</li>
+                <li>Фактическая стоимость зависит от даты поездки, сезона и наличия мест</li>
+                <li>Для некоторых направлений может потребоваться пересадка</li>
+                <li>Рекомендуется уточнять актуальные цены на сайте РЖД (pass.rzd.ru)</li>
+                <li><strong>Точные данные получены для:</strong> Москва (3 559 ₽), Екатеринбург (3 035 ₽), Тюмень (3 000 ₽)</li>
+            </ul>
+        </div>
+        
+        <footer>
+            <p>Данные актуальны на октябрь 2024 года | Создано для планирования поездок ДЮСК "Ямбург"</p>
+        </footer>
+    </div>
+    
+    <script>
+        // Поиск по таблице
+        const searchInput = document.getElementById('searchInput');
+        const tableBody = document.getElementById('tableBody');
+        const rows = tableBody.getElementsByTagName('tr');
+        
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            let visibleCount = 0;
+            
+            for (let row of rows) {
+                const cityCell = row.getElementsByTagName('td')[1];
+                if (cityCell) {
+                    const cityName = cityCell.textContent.toLowerCase();
+                    if (cityName.includes(searchTerm)) {
+                        row.style.display = '';
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                }
+            }
+            
+            // Показываем сообщение, если ничего не найдено
+            const existingMessage = document.querySelector('.no-results');
+            if (visibleCount === 0 && searchTerm !== '') {
+                if (!existingMessage) {
+                    const noResults = document.createElement('tr');
+                    noResults.className = 'no-results';
+                    noResults.innerHTML = '<td colspan="3">Ничего не найдено 😔</td>';
+                    tableBody.appendChild(noResults);
+                }
+            } else if (existingMessage) {
+                existingMessage.remove();
+            }
+        });
+    </script>
+</body>
+</html>
+

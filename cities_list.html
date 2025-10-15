@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Список городов</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 40px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #0066B3;
+        }
+        .cities {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .city {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <h1>Генерация списка городов...</h1>
+    <div id="cities-list" class="cities"></div>
+    
+    <script>
+        // Загружаем данные через fetch не получится из файла
+        // Поэтому создадим через Python
+        window.onload = function() {
+            document.querySelector('h1').textContent = 'Список городов создается...';
+        }
+    </script>
+</body>
+</html>
+
