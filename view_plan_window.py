@@ -1227,8 +1227,8 @@ class ViewPlanWindow:
                         ppo_estimate = est
                         break
                 
-                # Название мероприятия
-                report_text += f"1.{idx:<3}  {event.name[:57]:<60} {event.location:<20} {event.month:<12} {'':>10} {'':>5} "
+                # Название мероприятия (с трёхзначной нумерацией: 1.001, 1.002, и т.д.)
+                report_text += f"1.{idx:03d}  {event.name[:57]:<60} {event.location:<20} {event.month:<12} {'':>10} {'':>5} "
                 q_vals = [''] * 4
                 q_vals[quarter-1] = format_rubles(event.children_budget)
                 report_text += f"{format_rubles(event.children_budget):>15} {q_vals[0]:>15} {q_vals[1]:>15} {q_vals[2]:>15} {q_vals[3]:>15}\n"
@@ -1276,8 +1276,8 @@ class ViewPlanWindow:
                 q_totals[quarter] += event.children_budget
                 total_all += event.children_budget
                 
-                # Название мероприятия (внутренние без детализации)
-                report_text += f"2.{idx:<4} {event.name[:57]:<60} {event.location:<20} {event.month:<12} {'':>10} {'':>5} "
+                # Название мероприятия (внутренние без детализации, трёхзначная нумерация: 2.001, 2.002, и т.д.)
+                report_text += f"2.{idx:03d}  {event.name[:57]:<60} {event.location:<20} {event.month:<12} {'':>10} {'':>5} "
                 q_vals = [''] * 4
                 q_vals[quarter-1] = format_rubles(event.children_budget)
                 report_text += f"{format_rubles(event.children_budget):>15} {q_vals[0]:>15} {q_vals[1]:>15} {q_vals[2]:>15} {q_vals[3]:>15}\n"
@@ -1319,82 +1319,107 @@ class ViewPlanWindow:
             return
         
         report_text = ""
-        report_text += "=" * 190 + "\n"
-        report_text += f"РАСЧЕТ ПЛАНОВЫХ ЗАТРАТ НА {self.year} ГОД\n"
-        report_text += f"НА ПРОВЕДЕНИЕ КУЛЬТУРНО-МАССОВЫХ МЕРОПРИЯТИЙ ДЮСК \"ЯМБУРГ\" Ф. УЭВП\n"
-        report_text += "=" * 190 + "\n\n"
+        report_text += "=" * 250 + "\n"
+        report_text += f"ОТЧЕТ ПО КОМАНДИРОВКАМ ТРЕНЕРОВ ДЮСК \"ЯМБУРГ\" ЗА {self.year} ГОД (Ф. УЭВП)\n"
+        report_text += "=" * 250 + "\n\n"
         
         # Заголовок таблицы
-        report_text += f"{'№':<6} {'Наименование мероприятия':<50} {'Место/Ед.изм.':<20} {'Даты/Кол':<10} {'Стоим.':<10} {'Чел':<5} "
-        report_text += f"{'Затраты':>12} {'1 кв.':>15} {'2 кв.':>15} {'3 кв.':>15} {'4 кв.':>15}\n"
-        report_text += "=" * 190 + "\n\n"
+        report_text += f"{'Должность':<20} {'Месяц':<12} {'Дни':<6} {'Город':<25} {'Цель командировки':<50} "
+        report_text += f"{'Проезд':>12} {'Проживание':>12} {'Суточные':>12} {'Итого':>12} {'Факт':>12} {'Эк/Пер':>12}\n"
+        report_text += "=" * 250 + "\n"
         
-        # Определяем месяцы по кварталам
-        q1_months = ['Январь', 'Февраль', 'Март']
-        q2_months = ['Апрель', 'Май', 'Июнь']
-        q3_months = ['Июль', 'Август', 'Сентябрь']
-        q4_months = ['Октябрь', 'Ноябрь', 'Декабрь']
-        
-        def get_quarter(month):
-            if month in q1_months: return 1
-            if month in q2_months: return 2
-            if month in q3_months: return 3
-            if month in q4_months: return 4
-            return 1
-        
-        report_text += "1.   ВЫЕЗДНЫЕ МЕРОПРИЯТИЯ\n"
-        report_text += "-" * 190 + "\n\n"
-        
-        q_totals = {1: 0, 2: 0, 3: 0, 4: 0}
+        total_proezd = 0
+        total_prozhivanie = 0
+        total_sutochnie = 0
         total_all = 0
+        total_fact = 0
         
-        for idx, event in enumerate(away_events, 1):
-            quarter = get_quarter(event.month)
-            trainers_count = event.trainers_count if event.trainers_count > 0 else 1
+        # Собираем данные по каждому мероприятию
+        for event in away_events:
+            # Получаем смету УЭВП для этого мероприятия
+            estimate_data = self.db.cursor.execute('''
+                SELECT id, total_amount
+                FROM estimates
+                WHERE event_id = ? AND estimate_type = 'УЭВП'
+            ''', (event.id,)).fetchone()
             
-            # Заголовок мероприятия
-            report_text += f"1.{idx:<3}  {event.name:<50} {event.location:<20} {event.month:<10} {'':>10} {'':>5} "
+            if not estimate_data:
+                continue
             
-            q_vals = [''] * 4
-            q_vals[quarter-1] = format_rubles(event.trainers_budget)
+            estimate_id = estimate_data[0]
             
-            report_text += f"{format_rubles(event.trainers_budget):>12} {q_vals[0]:>15} {q_vals[1]:>15} {q_vals[2]:>15} {q_vals[3]:>15}\n"
+            # Получаем детали сметы (проезд, проживание, суточные)
+            items = self.db.cursor.execute('''
+                SELECT category, SUM(total) as total, MAX(days_count) as days
+                FROM estimate_items
+                WHERE estimate_id = ?
+                GROUP BY category
+            ''', (estimate_id,)).fetchall()
             
-            # Детализация (проезд, проживание, суточные)
-            # Определяем ставку суточных
-            from estimate_generator import EstimateGenerator
-            daily_rate = EstimateGenerator.get_daily_rate(event.location)
-            days = 5  # Примерное количество дней
+            proezd = 0
+            prozhivanie = 0
+            sutochnie = 0
+            days = 0
             
-            for t_idx in range(trainers_count):
-                trainer_budget = event.trainers_budget / trainers_count if trainers_count > 0 else event.trainers_budget
-                
-                # Проезд
-                proezd_budget = trainer_budget * 0.35
-                report_text += f"       Проезд{'':<44} {'ж/д билеты':<20} {'2':<10} {proezd_budget/2:>10.0f} {'1':<5}\n"
-                
-                # Проживание
-                prozhiv_budget = trainer_budget * 0.35
-                report_text += f"       Проживание{'':<40} {'дн':<20} {days:<10} {prozhiv_budget/days:>10.0f} {'1':<5}\n"
-                
-                # Суточные
-                sutochnie_budget = trainer_budget * 0.30
-                report_text += f"       Суточные{'':<42} {'дн':<20} {days:<10} {daily_rate:>10.0f} {'1':<5}\n"
+            for category, total, day_count in items:
+                if category == 'Проезд':
+                    proezd = total
+                elif category == 'Проживание':
+                    prozhivanie = total
+                    days = day_count or days
+                elif category == 'Суточные':
+                    sutochnie = total
+                    days = day_count or days
             
-            q_totals[quarter] += event.trainers_budget
-            total_all += event.trainers_budget
-            report_text += "\n"
+            # Если дни не определены, ставим по умолчанию
+            if days == 0:
+                days = 5
+            
+            # Формируем цель командировки
+            purpose = f"Сопровождение спортсменов для участия в {event.name} по виду спорта {event.sport}"
+            if len(purpose) > 48:
+                purpose = purpose[:47] + "..."
+            
+            # Итого по мероприятию
+            event_total = proezd + prozhivanie + sutochnie
+            
+            # Фактические расходы - только для проведённых и отменённых
+            fact = ""
+            economy = ""
+            if event.status in ["Проведено", "Отменено"]:
+                fact_amount = event.actual_trainers_budget if event.actual_trainers_budget is not None else event_total
+                fact = f"{fact_amount:>12.2f}"
+                economy_amount = event_total - fact_amount
+                economy = f"{economy_amount:>+12.2f}" if economy_amount != 0 else f"{'0.00':>12}"
+                total_fact += fact_amount
+            else:
+                fact = f"{'-':>12}"
+                economy = f"{'-':>12}"
+            
+            # Печатаем строку
+            report_text += f"{'Тренер':<20} {event.month:<12} {days:<6} {event.location[:24]:<25} "
+            report_text += f"{purpose:<50} {proezd:>12.2f} {prozhivanie:>12.2f} {sutochnie:>12.2f} "
+            report_text += f"{event_total:>12.2f} {fact} {economy}\n"
+            
+            total_proezd += proezd
+            total_prozhivanie += prozhivanie
+            total_sutochnie += sutochnie
+            total_all += event_total
         
-        report_text += f"{'ИТОГО выездные:':<101} "
-        report_text += f"{format_rubles(total_all):>12} {format_rubles(q_totals[1]):>15} {format_rubles(q_totals[2]):>15} "
-        report_text += f"{format_rubles(q_totals[3]):>15} {format_rubles(q_totals[4]):>15}\n"
-        report_text += "\n" + "=" * 190 + "\n\n"
+        report_text += "=" * 250 + "\n"
         
-        # Общий итог
-        report_text += f"{'ВСЕГО ИТОГО:':<101} "
-        report_text += f"{format_rubles(total_all):>12} {format_rubles(q_totals[1]):>15} {format_rubles(q_totals[2]):>15} "
-        report_text += f"{format_rubles(q_totals[3]):>15} {format_rubles(q_totals[4]):>15}\n"
-        report_text += "=" * 190 + "\n"
+        # Итого
+        report_text += f"{'ИТОГО:':<20} {'':<12} {'':<6} {'':<25} {'':<50} "
+        report_text += f"{total_proezd:>12.2f} {total_prozhivanie:>12.2f} {total_sutochnie:>12.2f} "
+        report_text += f"{total_all:>12.2f} "
+        
+        if total_fact > 0:
+            total_economy = total_all - total_fact
+            report_text += f"{total_fact:>12.2f} {total_economy:>+12.2f}\n"
+        else:
+            report_text += f"{'-':>12} {'-':>12}\n"
+        
+        report_text += "=" * 250 + "\n"
         
         self.text_area.insert('1.0', report_text)
     
@@ -1792,74 +1817,72 @@ class ViewPlanWindow:
                 ])
                 
                 for event in filtered_events:
-                    # Получаем сметы УЭВП для мероприятия
-                    estimates = self.db.get_estimates_by_event(event.id)
-                    uevp_estimates = [est for est in estimates if est[2] == 'УЭВП']  # estimate_type
+                    # Получаем смету УЭВП для мероприятия
+                    estimate_data = self.db.cursor.execute('''
+                        SELECT id, total_amount
+                        FROM estimates
+                        WHERE event_id = ? AND estimate_type = 'УЭВП'
+                    ''', (event.id,)).fetchone()
                     
-                    trainers_count = event.trainers_count if event.trainers_count > 0 else 1
+                    if not estimate_data:
+                        continue
                     
-                    if uevp_estimates:
-                        # Для каждого тренера (каждой сметы)
-                        for est in uevp_estimates:
-                            estimate_id = est[0]
-                            trainer_name = est[3] or 'тренер'  # trainer_name
-                            
-                            # Получаем статьи расходов
-                            items = self.db.get_estimate_items(estimate_id)
-                            
-                            proezd = 0
-                            prozhiv = 0
-                            sutochnie = 0
-                            days = 0
-                            
-                            for item in items:
-                                category = item[2]
-                                days_count = item[5] or 0
-                                total = item[7] or 0
-                                
-                                if category == "Проезд":
-                                    proezd = total
-                                elif category == "Проживание":
-                                    prozhiv = total
-                                    if days == 0:
-                                        days = days_count
-                                elif category == "Суточные":
-                                    sutochnie = total
-                                    if days == 0:
-                                        days = days_count
-                            
-                            total_amount = proezd + prozhiv + sutochnie
-                            
-                            writer.writerow([
-                                trainer_name,
-                                event.month,
-                                days if days > 0 else '',
-                                event.location,
-                                event.name,
-                                f"{proezd:.2f}",
-                                f"{prozhiv:.2f}",
-                                f"{sutochnie:.2f}",
-                                f"{total_amount:.2f}",
-                                '0,00 ₽',  # Фактические расходы (пока не заполнено)
-                                f"{total_amount:.2f}"  # Экономия/перерасход
-                            ])
-                    else:
-                        # Если смет нет, показываем хотя бы мероприятие
-                        for t_idx in range(trainers_count):
-                            trainer_budget = event.trainers_budget / trainers_count if trainers_count > 0 else event.trainers_budget
-                            writer.writerow([
-                                'тренер',
-                                event.month,
-                                '',
-                                event.location,
-                                event.name,
-                                '',
-                                '',
-                                '',
-                                f"{trainer_budget:.2f}",
-                                '0,00 ₽',
-                                f"{trainer_budget:.2f}"
-                            ])
+                    estimate_id = estimate_data[0]
+                    
+                    # Получаем детали сметы
+                    items = self.db.cursor.execute('''
+                        SELECT category, SUM(total) as total, MAX(days_count) as days
+                        FROM estimate_items
+                        WHERE estimate_id = ?
+                        GROUP BY category
+                    ''', (estimate_id,)).fetchall()
+                    
+                    proezd = 0
+                    prozhivanie = 0
+                    sutochnie = 0
+                    days = 0
+                    
+                    for category, total, day_count in items:
+                        if category == 'Проезд':
+                            proezd = total
+                        elif category == 'Проживание':
+                            prozhivanie = total
+                            days = day_count or days
+                        elif category == 'Суточные':
+                            sutochnie = total
+                            days = day_count or days
+                    
+                    if days == 0:
+                        days = 5
+                    
+                    # Формируем цель командировки
+                    purpose = f"Сопровождение спортсменов для участия в {event.name} по виду спорта {event.sport}"
+                    
+                    # Итого по мероприятию
+                    event_total = proezd + prozhivanie + sutochnie
+                    
+                    # Фактические расходы - только для проведённых и отменённых
+                    fact_str = ""
+                    economy_str = ""
+                    if event.status in ["Проведено", "Отменено"]:
+                        fact_amount = event.actual_trainers_budget if event.actual_trainers_budget is not None else event_total
+                        fact_str = f"{fact_amount:.2f}"
+                        economy_amount = event_total - fact_amount
+                        economy_str = f"{economy_amount:+.2f}"
+                    
+                    writer.writerow([
+                        'Тренер',
+                        event.month,
+                        days,
+                        event.location,
+                        purpose,
+                        f"{proezd:.2f}",
+                        f"{prozhivanie:.2f}",
+                        f"{sutochnie:.2f}",
+                        f"{event_total:.2f}",
+                        fact_str,
+                        economy_str
+                    ])
             
             else:  # 'full' и 'summary'
                 writer.writerow([
@@ -2337,10 +2360,10 @@ class ViewPlanWindow:
                     q_vals = ['', '', '', '']
                     q_vals[quarter-1] = f"{event.children_budget:.2f}"
                     
-                    # Название мероприятия
+                    # Название мероприятия (с трёхзначной нумерацией: 1.001, 1.002, и т.д.)
                     html_content += f"""
             <tr style="font-weight: bold;">
-                <td>1.{idx}</td>
+                <td>1.{idx:03d}</td>
                 <td>{html.escape(event.name[:60])}</td>
                 <td>{html.escape(event.location)}</td>
                 <td>{html.escape(event.month)}</td>
@@ -2431,7 +2454,7 @@ class ViewPlanWindow:
                     
                     html_content += f"""
             <tr>
-                <td>2.{idx}</td>
+                <td>2.{idx:03d}</td>
                 <td>{html.escape(event.name[:60])}</td>
                 <td>{html.escape(event.location)}</td>
                 <td>{html.escape(event.month)}</td>
@@ -2458,40 +2481,122 @@ class ViewPlanWindow:
     <table>
         <thead>
             <tr>
-                <th>№</th>
-                <th>Название</th>
-                <th>Место</th>
+                <th>Должность</th>
                 <th>Месяц</th>
-                <th>Тренеров</th>
-                <th>Бюджет УЭВП (₽)</th>
-                <th>Квартал</th>
+                <th>Дни</th>
+                <th>Город</th>
+                <th>Цель командировки</th>
+                <th>Проезд (₽)</th>
+                <th>Проживание (₽)</th>
+                <th>Суточные (₽)</th>
+                <th>Итого (₽)</th>
+                <th>Факт (₽)</th>
+                <th>Эк/Пер (₽)</th>
             </tr>
         </thead>
         <tbody>
 """
             
-            q_map = {
-                'Январь': 1, 'Февраль': 1, 'Март': 1,
-                'Апрель': 2, 'Май': 2, 'Июнь': 2,
-                'Июль': 3, 'Август': 3, 'Сентябрь': 3,
-                'Октябрь': 4, 'Ноябрь': 4, 'Декабрь': 4
-            }
+            total_proezd = 0
+            total_prozhivanie = 0
+            total_sutochnie = 0
+            total_all = 0
+            total_fact = 0
             
-            for idx, event in enumerate(away_events, 1):
-                quarter = q_map.get(event.month, 1)
+            for event in away_events:
+                # Получаем смету УЭВП для этого мероприятия
+                estimate_data = self.db.cursor.execute('''
+                    SELECT id, total_amount
+                    FROM estimates
+                    WHERE event_id = ? AND estimate_type = 'УЭВП'
+                ''', (event.id,)).fetchone()
+                
+                if not estimate_data:
+                    continue
+                
+                estimate_id = estimate_data[0]
+                
+                # Получаем детали сметы
+                items = self.db.cursor.execute('''
+                    SELECT category, SUM(total) as total, MAX(days_count) as days
+                    FROM estimate_items
+                    WHERE estimate_id = ?
+                    GROUP BY category
+                ''', (estimate_id,)).fetchall()
+                
+                proezd = 0
+                prozhivanie = 0
+                sutochnie = 0
+                days = 0
+                
+                for category, total, day_count in items:
+                    if category == 'Проезд':
+                        proezd = total
+                    elif category == 'Проживание':
+                        prozhivanie = total
+                        days = day_count or days
+                    elif category == 'Суточные':
+                        sutochnie = total
+                        days = day_count or days
+                
+                if days == 0:
+                    days = 5
+                
+                # Формируем цель командировки
+                purpose = f"Сопровождение спортсменов для участия в {event.name} по виду спорта {event.sport}"
+                
+                # Итого по мероприятию
+                event_total = proezd + prozhivanie + sutochnie
+                
+                # Фактические расходы - только для проведённых и отменённых
+                fact_cell = "-"
+                economy_cell = "-"
+                if event.status in ["Проведено", "Отменено"]:
+                    fact_amount = event.actual_trainers_budget if event.actual_trainers_budget is not None else event_total
+                    fact_cell = f"{fact_amount:.2f}"
+                    economy_amount = event_total - fact_amount
+                    economy_cell = f"{economy_amount:+.2f}"
+                    total_fact += fact_amount
+                
                 html_content += f"""
             <tr>
-                <td>{idx}</td>
-                <td>{html.escape(event.name)}</td>
-                <td>{html.escape(event.location)}</td>
+                <td>Тренер</td>
                 <td>{html.escape(event.month)}</td>
-                <td>{event.trainers_count}</td>
-                <td>{event.trainers_budget:.2f}</td>
-                <td>{quarter}</td>
+                <td>{days}</td>
+                <td>{html.escape(event.location)}</td>
+                <td>{html.escape(purpose)}</td>
+                <td>{proezd:.2f}</td>
+                <td>{prozhivanie:.2f}</td>
+                <td>{sutochnie:.2f}</td>
+                <td>{event_total:.2f}</td>
+                <td>{fact_cell}</td>
+                <td>{economy_cell}</td>
             </tr>
 """
+                
+                total_proezd += proezd
+                total_prozhivanie += prozhivanie
+                total_sutochnie += sutochnie
+                total_all += event_total
             
-            html_content += """
+            # Строка итого
+            total_fact_cell = f"{total_fact:.2f}" if total_fact > 0 else "-"
+            total_economy_cell = f"{(total_all - total_fact):+.2f}" if total_fact > 0 else "-"
+            
+            html_content += f"""
+            <tr style="font-weight: bold; background-color: #f0f0f0;">
+                <td>ИТОГО:</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td>{total_proezd:.2f}</td>
+                <td>{total_prozhivanie:.2f}</td>
+                <td>{total_sutochnie:.2f}</td>
+                <td>{total_all:.2f}</td>
+                <td>{total_fact_cell}</td>
+                <td>{total_economy_cell}</td>
+            </tr>
         </tbody>
     </table>
 """

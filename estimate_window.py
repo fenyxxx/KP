@@ -11,6 +11,15 @@ import webbrowser
 import os
 import html
 from datetime import datetime
+import math
+
+
+def round_up_to_10(value):
+    """
+    Округлить в большую сторону до 10
+    Например: 1001 -> 1010, 1005 -> 1010, 1010 -> 1010
+    """
+    return math.ceil(value / 10) * 10
 
 
 class EstimateWindow:
@@ -311,10 +320,11 @@ class EstimateWindow:
         
         for category in category_order:
             if category in categories:
-                # Заголовок категории
+                # Заголовок категории с трёхзначной нумерацией (например: 1.001)
+                formatted_number = f"1.{item_number:03d}"
                 html_content += f"""
             <tr>
-                <td><strong>{item_number}.</strong></td>
+                <td><strong>{formatted_number}</strong></td>
                 <td colspan="5"><strong>{category}</strong></td>
             </tr>
 """
@@ -788,12 +798,18 @@ class EstimateItemDialog:
         create_styled_button(button_frame, "Отмена", self.window.destroy, 'normal').pack(side=tk.LEFT, padx=5)
     
     def _calculate_total(self):
-        """Рассчитать итоговую сумму"""
+        """Рассчитать итоговую сумму (ставка округляется в большую сторону до 10)"""
         try:
             people = self.people_var.get()
             days = self.days_var.get()
-            rate = self.rate_var.get()
-            self.total = people * days * rate
+            rate_raw = self.rate_var.get()
+            # Округляем ставку в большую сторону до 10
+            rate_rounded = round_up_to_10(rate_raw)
+            # Обновляем отображение ставки, если она изменилась
+            if rate_rounded != rate_raw:
+                self.rate_var.set(rate_rounded)
+            # Итоговая сумма = люди * дни * округленная ставка
+            self.total = people * days * rate_rounded
             self.total_label.config(text=f"{self.total:,.2f} руб.".replace(',', ' '))
         except:
             pass

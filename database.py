@@ -433,7 +433,12 @@ class Database:
             days_count: Количество дней
             rate: Ставка
         """
+        import math
+        # Округляем ставку в большую сторону до 10
+        rate = math.ceil(rate / 10) * 10
+        # Итоговая сумма = люди * дни * округленная ставка
         total = people_count * days_count * rate
+        
         self.cursor.execute('''
             INSERT INTO estimate_items (estimate_id, category, description, 
                                        people_count, days_count, rate, total)
@@ -449,7 +454,12 @@ class Database:
     def update_estimate_item(self, item_id: int, category: str, description: str = "",
                             people_count: int = 0, days_count: int = 0, rate: float = 0):
         """Обновить статью расходов"""
+        import math
+        # Округляем ставку в большую сторону до 10
+        rate = math.ceil(rate / 10) * 10
+        # Итоговая сумма = люди * дни * округленная ставка
         total = people_count * days_count * rate
+        
         self.cursor.execute('''
             UPDATE estimate_items
             SET category = ?, description = ?, people_count = ?, 
