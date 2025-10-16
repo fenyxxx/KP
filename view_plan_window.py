@@ -80,8 +80,20 @@ class ViewPlanWindow:
         self.window = tk.Toplevel(parent)
         self.window.title(f"Календарный план {year}")
         
-        # Разворачиваем окно на весь экран
-        self.window.state('zoomed')  # Для Windows - разворачивает на весь экран
+        # Разворачиваем окно на весь экран (кроссплатформенно)
+        try:
+            # Пробуем Windows-способ
+            self.window.state('zoomed')
+        except:
+            # Для Linux (Red OS) - разворачиваем через geometry
+            try:
+                # Получаем размер экрана
+                screen_width = self.window.winfo_screenwidth()
+                screen_height = self.window.winfo_screenheight()
+                self.window.geometry(f"{screen_width}x{screen_height}+0+0")
+            except:
+                # Если и это не работает, устанавливаем большой размер
+                self.window.geometry("1400x900")
         
         # Центрируем окно
         self.window.transient(parent)

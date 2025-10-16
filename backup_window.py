@@ -26,14 +26,26 @@ class BackupWindow:
         # Создаём окно
         self.window = tk.Toplevel(parent)
         self.window.title("ДЮСК Ямбург - Резервное копирование")
-        self.window.geometry("800x550")
+        self.window.transient(parent)
+        self.window.grab_set()
+        
+        # Разворачиваем окно на весь экран (кроссплатформенно)
+        try:
+            # Пробуем Windows-способ
+            self.window.state('zoomed')
+        except:
+            # Для Linux (Red OS) - разворачиваем через geometry
+            try:
+                # Получаем размер экрана
+                screen_width = self.window.winfo_screenwidth()
+                screen_height = self.window.winfo_screenheight()
+                self.window.geometry(f"{screen_width}x{screen_height}+0+0")
+            except:
+                # Если и это не работает, устанавливаем большой размер
+                self.window.geometry("800x550")
         
         # Применяем единые стили
         apply_styles(self.window)
-        
-        # Центрируем окно
-        self.window.transient(parent)
-        self.window.grab_set()
         
         # Обработчик закрытия окна (для Red OS и других систем)
         self.window.protocol("WM_DELETE_WINDOW", self.window.destroy)

@@ -32,15 +32,26 @@ class ClarifyEventWindow:
         # Создаем окно
         self.window = tk.Toplevel(parent)
         self.window.title(f"ДЮСК Ямбург - Уточнить: {event.name[:40]}...")
-        self.window.geometry("900x800")  # Увеличили размер для РЕД ОС
-        self.window.resizable(True, True)  # Разрешаем изменять размер
+        self.window.transient(parent)
+        self.window.grab_set()
+        
+        # Разворачиваем окно на весь экран (кроссплатформенно)
+        try:
+            # Пробуем Windows-способ
+            self.window.state('zoomed')
+        except:
+            # Для Linux (Red OS) - разворачиваем через geometry
+            try:
+                # Получаем размер экрана
+                screen_width = self.window.winfo_screenwidth()
+                screen_height = self.window.winfo_screenheight()
+                self.window.geometry(f"{screen_width}x{screen_height}+0+0")
+            except:
+                # Если и это не работает, устанавливаем большой размер
+                self.window.geometry("900x800")
         
         # Применяем единые стили
         apply_styles(self.window)
-        
-        # Центрируем окно
-        self.window.transient(parent)
-        self.window.grab_set()
         
         # Обработчик закрытия окна (для Red OS и других систем)
         self.window.protocol("WM_DELETE_WINDOW", self._on_close)
