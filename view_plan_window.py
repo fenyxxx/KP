@@ -1426,6 +1426,7 @@ class ViewPlanWindow:
         total_sutochnie = 0
         total_all = 0
         total_fact = 0
+        events_with_estimates_count = 0  # Счётчик мероприятий со сметами
         
         # Собираем данные по каждому мероприятию
         for event in away_events:
@@ -1498,6 +1499,7 @@ class ViewPlanWindow:
             total_prozhivanie += prozhivanie
             total_sutochnie += sutochnie
             total_all += event_total
+            events_with_estimates_count += 1  # Увеличиваем счётчик
         
         report_text += "=" * 250 + "\n"
         
@@ -1513,6 +1515,11 @@ class ViewPlanWindow:
             report_text += f"{'-':>12} {'-':>12}\n"
         
         report_text += "=" * 250 + "\n"
+        
+        # Добавляем итоги
+        report_text += "\n\nИтоги\n\n"
+        report_text += f"Всего выездных мероприятий: {events_with_estimates_count}\n\n"
+        report_text += f"Бюджет на тренеров (ф. УЭВП ООО \"Газпром добыча Ямбург\"): {format_rubles(total_all)}\n"
         
         self.text_area.insert('1.0', report_text)
     
@@ -2866,8 +2873,21 @@ class ViewPlanWindow:
         
         # Итоги (для всех, кроме summary - у него свои итоги уже встроены)
         if self.current_report_type != 'summary':
-            # Для годового отчета УЭВП используем только выездные события
-            events_for_totals = [e for e in events if e.event_type == "Выездное"] if self.current_report_type == 'annual_uevp' else events
+            # Для годового отчета УЭВП используем только выездные события с реальными сметами УЭВП
+            if self.current_report_type == 'annual_uevp':
+                # Отбираем только те выездные мероприятия, у которых есть смета УЭВП
+                events_for_totals = []
+                for e in events:
+                    if e.event_type == "Выездное":
+                        # Проверяем наличие сметы УЭВП
+                        estimate_data = self.db.cursor.execute('''
+                            SELECT id FROM estimates
+                            WHERE event_id = ? AND estimate_type = 'УЭВП'
+                        ''', (e.id,)).fetchone()
+                        if estimate_data:
+                            events_for_totals.append(e)
+            else:
+                events_for_totals = events
             
             total_children_plan = sum(e.children_budget for e in events_for_totals)
             total_trainers_plan = sum(e.trainers_budget for e in events_for_totals)
