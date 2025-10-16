@@ -36,6 +36,31 @@ def format_rubles(amount):
     return f"{formatted} руб."
 
 
+def format_number_ru(number, decimals=2):
+    """
+    Форматировать число для Excel (русская локаль) - с запятой вместо точки
+    
+    Args:
+        number: Число для форматирования
+        decimals: Количество знаков после запятой (по умолчанию 2)
+        
+    Returns:
+        Строка с числом, где десятичный разделитель - запятая
+    """
+    if number is None:
+        return ""
+    if number == 0 or number == 0.0:
+        return "0"
+    
+    # Форматируем число с нужным количеством знаков после точки
+    formatted = f"{number:.{decimals}f}"
+    
+    # Заменяем точку на запятую для Excel
+    formatted = formatted.replace('.', ',')
+    
+    return formatted
+
+
 def format_number(amount):
     """
     Форматировать число с разделителями тысяч (без валюты)
@@ -1777,11 +1802,11 @@ class ViewPlanWindow:
                     # Итоговая строка
                     writer.writerow([
                         '', '', '', '', '', 
-                        f"{away_total_csv:.2f}",
-                        f"{away_q_totals_csv[1]:.2f}",
-                        f"{away_q_totals_csv[2]:.2f}",
-                        f"{away_q_totals_csv[3]:.2f}",
-                        f"{away_q_totals_csv[4]:.2f}",
+                        format_number_ru(away_total_csv),
+                        format_number_ru(away_q_totals_csv[1]),
+                        format_number_ru(away_q_totals_csv[2]),
+                        format_number_ru(away_q_totals_csv[3]),
+                        format_number_ru(away_q_totals_csv[4]),
                         '', '', '', '', '', ''
                     ])
                     
@@ -1789,7 +1814,7 @@ class ViewPlanWindow:
                     for idx, event in enumerate(away_events_csv, 1):
                         quarter = q_map.get(event.month, 1)
                         q_vals = ['', '', '', '']
-                        q_vals[quarter-1] = f"{event.children_budget:.2f}"
+                        q_vals[quarter-1] = format_number_ru(event.children_budget)
                         
                         # Получаем смету ППО
                         estimates = self.db.get_estimates_by_event(event.id)
@@ -1806,7 +1831,7 @@ class ViewPlanWindow:
                             event.name,
                             event.location,
                             event.month,
-                            f"{event.children_budget:.2f}",
+                            format_number_ru(event.children_budget),
                             q_vals[0], q_vals[1], q_vals[2], q_vals[3],
                             '', '', '', '', '', ''
                         ])
@@ -1829,9 +1854,9 @@ class ViewPlanWindow:
                                     category,
                                     description,
                                     days_count,
-                                    f"{rate:.2f}",
+                                    format_number_ru(rate),
                                     people_count,
-                                    f"{total:.2f}"
+                                    format_number_ru(total)
                                 ])
                 
                 # 2. ВНУТРЕННИЕ МЕРОПРИЯТИЯ
@@ -1850,11 +1875,11 @@ class ViewPlanWindow:
                     # Итоговая строка
                     writer.writerow([
                         '', '', '', '', '',
-                        f"{internal_total_csv:.2f}",
-                        f"{internal_q_totals_csv[1]:.2f}",
-                        f"{internal_q_totals_csv[2]:.2f}",
-                        f"{internal_q_totals_csv[3]:.2f}",
-                        f"{internal_q_totals_csv[4]:.2f}",
+                        format_number_ru(internal_total_csv),
+                        format_number_ru(internal_q_totals_csv[1]),
+                        format_number_ru(internal_q_totals_csv[2]),
+                        format_number_ru(internal_q_totals_csv[3]),
+                        format_number_ru(internal_q_totals_csv[4]),
                         '', '', '', '', '', ''
                     ])
                     
@@ -1862,7 +1887,7 @@ class ViewPlanWindow:
                     for idx, event in enumerate(internal_events_csv, 1):
                         quarter = q_map.get(event.month, 1)
                         q_vals = ['', '', '', '']
-                        q_vals[quarter-1] = f"{event.children_budget:.2f}"
+                        q_vals[quarter-1] = format_number_ru(event.children_budget)
                         
                         # Получаем смету ППО
                         estimates = self.db.get_estimates_by_event(event.id)
@@ -1879,7 +1904,7 @@ class ViewPlanWindow:
                             event.name,
                             event.location,
                             event.month,
-                            f"{event.children_budget:.2f}",
+                            format_number_ru(event.children_budget),
                             q_vals[0], q_vals[1], q_vals[2], q_vals[3],
                             '', '', '', '', '', ''
                         ])
@@ -1902,9 +1927,9 @@ class ViewPlanWindow:
                                     category,
                                     description,
                                     days_count,
-                                    f"{rate:.2f}",
+                                    format_number_ru(rate),
                                     people_count,
-                                    f"{total:.2f}"
+                                    format_number_ru(total)
                                 ])
             
             elif self.current_report_type == 'annual_uevp':
@@ -1964,9 +1989,9 @@ class ViewPlanWindow:
                     economy_str = ""
                     if event.status in ["Проведено", "Отменено"]:
                         fact_amount = event.actual_trainers_budget if event.actual_trainers_budget is not None else event_total
-                        fact_str = f"{fact_amount:.2f}"
+                        fact_str = format_number_ru(fact_amount)
                         economy_amount = event_total - fact_amount
-                        economy_str = f"{economy_amount:+.2f}"
+                        economy_str = format_number_ru(economy_amount)
                     
                     writer.writerow([
                         'Тренер',
@@ -1974,10 +1999,10 @@ class ViewPlanWindow:
                         days,
                         event.location,
                         purpose,
-                        f"{proezd:.2f}",
-                        f"{prozhivanie:.2f}",
-                        f"{sutochnie:.2f}",
-                        f"{event_total:.2f}",
+                        format_number_ru(proezd),
+                        format_number_ru(prozhivanie),
+                        format_number_ru(sutochnie),
+                        format_number_ru(event_total),
                         fact_str,
                         economy_str
                     ])
@@ -2005,12 +2030,12 @@ class ViewPlanWindow:
                         event.sport,
                         event.name,
                         event.location,
-                        f"{event.children_budget:.2f}",
-                        f"{event.trainers_budget:.2f}",
+                        format_number_ru(event.children_budget),
+                        format_number_ru(event.trainers_budget),
                         event.status or 'Запланировано',
                         fact_dates,
-                        f"{event.actual_children_budget:.2f}" if event.actual_children_budget else "",
-                        f"{event.actual_trainers_budget:.2f}" if event.actual_trainers_budget else "",
+                        format_number_ru(event.actual_children_budget) if event.actual_children_budget else "",
+                        format_number_ru(event.actual_trainers_budget) if event.actual_trainers_budget else "",
                         event.cancellation_reason or "",
                         event.notes or ""
                     ])
@@ -2455,11 +2480,11 @@ class ViewPlanWindow:
                 html_content += f"""
             <tr style="background-color: #0066B3; color: white; font-weight: bold;">
                 <td colspan="6"></td>
-                <td>{away_total_html:.2f}</td>
-                <td>{away_q_totals_html[1]:.2f}</td>
-                <td>{away_q_totals_html[2]:.2f}</td>
-                <td>{away_q_totals_html[3]:.2f}</td>
-                <td>{away_q_totals_html[4]:.2f}</td>
+                <td>{format_number_ru(away_total_html)}</td>
+                <td>{format_number_ru(away_q_totals_html[1])}</td>
+                <td>{format_number_ru(away_q_totals_html[2])}</td>
+                <td>{format_number_ru(away_q_totals_html[3])}</td>
+                <td>{format_number_ru(away_q_totals_html[4])}</td>
             </tr>
 """
                 
@@ -2476,7 +2501,7 @@ class ViewPlanWindow:
                     
                     # Заполняем кварталы
                     q_vals = ['', '', '', '']
-                    q_vals[quarter-1] = f"{event.children_budget:.2f}"
+                    q_vals[quarter-1] = format_number_ru(event.children_budget)
                     
                     # Название мероприятия (с трёхзначной нумерацией: 1.001, 1.002, и т.д.)
                     html_content += f"""
@@ -2487,7 +2512,7 @@ class ViewPlanWindow:
                 <td>{html.escape(event.month)}</td>
                 <td></td>
                 <td></td>
-                <td>{event.children_budget:.2f}</td>
+                <td>{format_number_ru(event.children_budget)}</td>
                 <td>{q_vals[0]}</td>
                 <td>{q_vals[1]}</td>
                 <td>{q_vals[2]}</td>
@@ -2577,11 +2602,11 @@ class ViewPlanWindow:
                 html_content += f"""
             <tr style="background-color: #0066B3; color: white; font-weight: bold;">
                 <td colspan="6"></td>
-                <td>{internal_total_html:.2f}</td>
-                <td>{internal_q_totals_html[1]:.2f}</td>
-                <td>{internal_q_totals_html[2]:.2f}</td>
-                <td>{internal_q_totals_html[3]:.2f}</td>
-                <td>{internal_q_totals_html[4]:.2f}</td>
+                <td>{format_number_ru(internal_total_html)}</td>
+                <td>{format_number_ru(internal_q_totals_html[1])}</td>
+                <td>{format_number_ru(internal_q_totals_html[2])}</td>
+                <td>{format_number_ru(internal_q_totals_html[3])}</td>
+                <td>{format_number_ru(internal_q_totals_html[4])}</td>
             </tr>
 """
                 
@@ -2598,7 +2623,7 @@ class ViewPlanWindow:
                     
                     # Заполняем кварталы
                     q_vals = ['', '', '', '']
-                    q_vals[quarter-1] = f"{event.children_budget:.2f}"
+                    q_vals[quarter-1] = format_number_ru(event.children_budget)
                     
                     # Название мероприятия (с трёхзначной нумерацией: 2.001, 2.002, и т.д.)
                     html_content += f"""
@@ -2609,7 +2634,7 @@ class ViewPlanWindow:
                 <td>{html.escape(event.month)}</td>
                 <td></td>
                 <td></td>
-                <td>{event.children_budget:.2f}</td>
+                <td>{format_number_ru(event.children_budget)}</td>
                 <td>{q_vals[0]}</td>
                 <td>{q_vals[1]}</td>
                 <td>{q_vals[2]}</td>
@@ -2731,9 +2756,9 @@ class ViewPlanWindow:
                 economy_cell = "-"
                 if event.status in ["Проведено", "Отменено"]:
                     fact_amount = event.actual_trainers_budget if event.actual_trainers_budget is not None else event_total
-                    fact_cell = f"{fact_amount:.2f}"
+                    fact_cell = format_number_ru(fact_amount)
                     economy_amount = event_total - fact_amount
-                    economy_cell = f"{economy_amount:+.2f}"
+                    economy_cell = format_number_ru(economy_amount)
                     total_fact += fact_amount
                 
                 html_content += f"""
@@ -2743,10 +2768,10 @@ class ViewPlanWindow:
                 <td>{days}</td>
                 <td>{html.escape(event.location)}</td>
                 <td>{html.escape(purpose)}</td>
-                <td>{proezd:.2f}</td>
-                <td>{prozhivanie:.2f}</td>
-                <td>{sutochnie:.2f}</td>
-                <td>{event_total:.2f}</td>
+                <td>{format_number_ru(proezd)}</td>
+                <td>{format_number_ru(prozhivanie)}</td>
+                <td>{format_number_ru(sutochnie)}</td>
+                <td>{format_number_ru(event_total)}</td>
                 <td>{fact_cell}</td>
                 <td>{economy_cell}</td>
             </tr>
@@ -2758,8 +2783,8 @@ class ViewPlanWindow:
                 total_all += event_total
             
             # Строка итого
-            total_fact_cell = f"{total_fact:.2f}" if total_fact > 0 else "-"
-            total_economy_cell = f"{(total_all - total_fact):+.2f}" if total_fact > 0 else "-"
+            total_fact_cell = format_number_ru(total_fact) if total_fact > 0 else "-"
+            total_economy_cell = format_number_ru(total_all - total_fact) if total_fact > 0 else "-"
             
             html_content += f"""
             <tr style="font-weight: bold; background-color: #f0f0f0;">
@@ -2768,10 +2793,10 @@ class ViewPlanWindow:
                 <td></td>
                 <td></td>
                 <td></td>
-                <td>{total_proezd:.2f}</td>
-                <td>{total_prozhivanie:.2f}</td>
-                <td>{total_sutochnie:.2f}</td>
-                <td>{total_all:.2f}</td>
+                <td>{format_number_ru(total_proezd)}</td>
+                <td>{format_number_ru(total_prozhivanie)}</td>
+                <td>{format_number_ru(total_sutochnie)}</td>
+                <td>{format_number_ru(total_all)}</td>
                 <td>{total_fact_cell}</td>
                 <td>{total_economy_cell}</td>
             </tr>
