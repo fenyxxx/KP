@@ -330,7 +330,14 @@ class EstimateWindow:
 """
         
         item_number = 1
+        # Стандартный порядок категорий для выездных мероприятий
         category_order = ['Проезд', 'Проживание', 'Суточные', 'Питание', 'Другое']
+        
+        # Добавляем все остальные категории (для внутренних мероприятий с произвольными категориями)
+        all_categories = list(categories.keys())
+        for cat in all_categories:
+            if cat not in category_order:
+                category_order.append(cat)
         
         for category in category_order:
             if category in categories:
@@ -494,11 +501,18 @@ class EstimateEditDialog:
         btn_frame = ttk.Frame(items_frame)
         btn_frame.pack(fill=tk.X, pady=5)
         
-        ttk.Button(btn_frame, text="➕ Проезд", command=lambda: self._add_item('Проезд')).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_frame, text="➕ Проживание", command=lambda: self._add_item('Проживание')).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_frame, text="➕ Суточные", command=lambda: self._add_item('Суточные')).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_frame, text="➕ Питание", command=lambda: self._add_item('Питание')).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_frame, text="➕ Другое", command=lambda: self._add_item('Другое')).pack(side=tk.LEFT, padx=2)
+        # Для внутренних мероприятий (ППО) - только кнопка создания произвольной статьи
+        if self.estimate_type == 'ППО' and self.event.event_type == 'Внутреннее':
+            ttk.Button(btn_frame, text="➕ Создать статью расходов", 
+                      command=self._add_custom_item,
+                      style='Accent.TButton').pack(side=tk.LEFT, padx=2)
+        else:
+            # Для выездных мероприятий - стандартные кнопки
+            ttk.Button(btn_frame, text="➕ Проезд", command=lambda: self._add_item('Проезд')).pack(side=tk.LEFT, padx=2)
+            ttk.Button(btn_frame, text="➕ Проживание", command=lambda: self._add_item('Проживание')).pack(side=tk.LEFT, padx=2)
+            ttk.Button(btn_frame, text="➕ Суточные", command=lambda: self._add_item('Суточные')).pack(side=tk.LEFT, padx=2)
+            ttk.Button(btn_frame, text="➕ Питание", command=lambda: self._add_item('Питание')).pack(side=tk.LEFT, padx=2)
+            ttk.Button(btn_frame, text="➕ Другое", command=lambda: self._add_item('Другое')).pack(side=tk.LEFT, padx=2)
         
         # Таблица статей (уменьшена до 5 строк, т.к. обычно не больше 5 статей)
         columns = ('category', 'description', 'people', 'days', 'rate', 'total')
@@ -584,6 +598,57 @@ class EstimateEditDialog:
             ), tags=(item.id,))
         
         self._update_total()
+    
+    def _add_custom_item(self):
+        """Создать статью расходов с произвольным названием"""
+        # Диалог для ввода названия категории
+        dialog_window = tk.Toplevel(self.window)
+        dialog_window.title("Новая статья расходов")
+        dialog_window.transient(self.window)
+        dialog_window.grab_set()
+        
+        # Центрируем окно
+        dialog_window.geometry("400x150")
+        
+        result = {'category': None}
+        
+        def on_ok():
+            category = category_var.get().strip()
+            if category:
+                result['category'] = category
+                dialog_window.destroy()
+            else:
+                messagebox.showwarning("Ошибка", "Введите название статьи расходов")
+        
+        def on_cancel():
+            dialog_window.destroy()
+        
+        # Поле ввода
+        ttk.Label(dialog_window, text="Название статьи расходов:", 
+                 font=(FONT_FAMILY, 10)).pack(pady=20, padx=20)
+        
+        category_var = tk.StringVar()
+        entry = ttk.Entry(dialog_window, textvariable=category_var, width=40, 
+                         font=(FONT_FAMILY, 10))
+        entry.pack(padx=20)
+        entry.focus()
+        
+        # Кнопки
+        btn_frame = ttk.Frame(dialog_window)
+        btn_frame.pack(pady=20)
+        
+        ttk.Button(btn_frame, text="Создать", command=on_ok).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Отмена", command=on_cancel).pack(side=tk.LEFT, padx=5)
+        
+        # Обработка Enter
+        entry.bind('<Return>', lambda e: on_ok())
+        dialog_window.bind('<Escape>', lambda e: on_cancel())
+        
+        dialog_window.wait_window()
+        
+        # Если категория введена, открываем диалог добавления статьи
+        if result['category']:
+            self._add_item(result['category'])
     
     def _add_item(self, category: str):
         """Добавить статью расходов"""
