@@ -930,13 +930,6 @@ class MainWindow:
         
         event = Event.from_db_row(event_data)
         
-        # Проверяем, что это выездное мероприятие
-        if event.event_type != "Выездное":
-            messagebox.showinfo("Информация", 
-                              "Сметы создаются только для выездных мероприятий.\n\n" +
-                              f"Выбранное мероприятие: {event.event_type}")
-            return
-        
         # Открываем окно управления сметами
         EstimateWindow(self.root, self.db, event)
     
