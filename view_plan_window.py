@@ -1518,9 +1518,13 @@ class ViewPlanWindow:
                 economy = f"{'-':>12}"
             
             # Печатаем строку для каждого тренера
+            # В смете указаны расходы на ВСЕХ тренеров, поэтому делим на количество
+            proezd_per_person = proezd / people_count
+            prozhivanie_per_person = prozhivanie / people_count
+            sutochnie_per_person = sutochnie / people_count
+            total_per_person = event_total / people_count
+            
             for idx, position in enumerate(positions):
-                # В смете уже указаны расходы на каждого тренера, поэтому НЕ делим
-                
                 # Для первого тренера показываем факт и экономию, для остальных - прочерки
                 if idx == 0:
                     fact_display = fact
@@ -1530,8 +1534,8 @@ class ViewPlanWindow:
                     economy_display = f"{'-':>12}"
                 
                 report_text += f"{row_number:<5} {position:<20} {event.month:<12} {days:<6} {event.location[:24]:<25} "
-                report_text += f"{purpose:<50} {proezd:>12.2f} {prozhivanie:>12.2f} {sutochnie:>12.2f} "
-                report_text += f"{event_total:>12.2f} {fact_display} {economy_display}\n"
+                report_text += f"{purpose:<50} {proezd_per_person:>12.2f} {prozhivanie_per_person:>12.2f} {sutochnie_per_person:>12.2f} "
+                report_text += f"{total_per_person:>12.2f} {fact_display} {economy_display}\n"
                 row_number += 1
             
             total_proezd += proezd
@@ -2074,9 +2078,13 @@ class ViewPlanWindow:
                         economy_str = format_number_ru(economy_amount)
                     
                     # Выводим строку для каждого тренера
+                    # В смете указаны расходы на ВСЕХ тренеров, поэтому делим на количество
+                    proezd_per_person = proezd / people_count
+                    prozhivanie_per_person = prozhivanie / people_count
+                    sutochnie_per_person = sutochnie / people_count
+                    total_per_person = event_total / people_count
+                    
                     for idx, position in enumerate(positions):
-                        # В смете уже указаны расходы на каждого тренера, поэтому НЕ делим
-                        
                         # Для первого тренера показываем факт и экономию, для остальных - прочерки
                         if idx == 0:
                             fact_display = fact_str
@@ -2092,10 +2100,10 @@ class ViewPlanWindow:
                             days,
                             event.location,
                             purpose,
-                            format_number_ru(proezd),
-                            format_number_ru(prozhivanie),
-                            format_number_ru(sutochnie),
-                            format_number_ru(event_total),
+                            format_number_ru(proezd_per_person),
+                            format_number_ru(prozhivanie_per_person),
+                            format_number_ru(sutochnie_per_person),
+                            format_number_ru(total_per_person),
                             fact_display,
                             economy_display
                         ])
@@ -2893,9 +2901,13 @@ class ViewPlanWindow:
                     total_fact += fact_amount
                 
                 # Выводим строку для каждого тренера
+                # В смете указаны расходы на ВСЕХ тренеров, поэтому делим на количество
+                proezd_per_person = proezd / people_count
+                prozhivanie_per_person = prozhivanie / people_count
+                sutochnie_per_person = sutochnie / people_count
+                total_per_person = event_total / people_count
+                
                 for idx, position in enumerate(positions):
-                    # В смете уже указаны расходы на каждого тренера, поэтому НЕ делим
-                    
                     # Для первого тренера показываем факт и экономию, для остальных - прочерки
                     if idx == 0:
                         fact_display = fact_cell
@@ -2912,10 +2924,10 @@ class ViewPlanWindow:
                 <td>{days}</td>
                 <td>{html.escape(event.location)}</td>
                 <td>{html.escape(purpose)}</td>
-                <td>{format_number_ru(proezd)}</td>
-                <td>{format_number_ru(prozhivanie)}</td>
-                <td>{format_number_ru(sutochnie)}</td>
-                <td>{format_number_ru(event_total)}</td>
+                <td>{format_number_ru(proezd_per_person)}</td>
+                <td>{format_number_ru(prozhivanie_per_person)}</td>
+                <td>{format_number_ru(sutochnie_per_person)}</td>
+                <td>{format_number_ru(total_per_person)}</td>
                 <td>{fact_display}</td>
                 <td>{economy_display}</td>
             </tr>

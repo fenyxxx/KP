@@ -452,12 +452,12 @@ class EstimateEditDialog:
             planned_budget = self.event.children_budget
             budget_label = "Заложенная сумма на детей (ППО)"
         else:  # УЭВП
-            # Для УЭВП - это сумма на одного тренера
-            if self.event.trainers_count > 0:
-                planned_budget = self.event.trainers_budget / self.event.trainers_count
+            # Для УЭВП - это сумма на всех тренеров
+            planned_budget = self.event.trainers_budget
+            if self.event.trainers_count > 1:
+                budget_label = f"Заложенная сумма на {self.event.trainers_count} тренеров (УЭВП)"
             else:
-                planned_budget = self.event.trainers_budget
-            budget_label = "Заложенная сумма на тренера (УЭВП)"
+                budget_label = "Заложенная сумма на тренера (УЭВП)"
         
         self.planned_budget = planned_budget
         
