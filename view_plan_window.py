@@ -1445,7 +1445,7 @@ class ViewPlanWindow:
             
             # Получаем детали сметы (проезд, проживание, суточные)
             items = self.db.cursor.execute('''
-                SELECT category, SUM(total) as total, MAX(days_count) as days, MAX(people_count) as people
+                SELECT category, SUM(total) as total, MAX(days_count) as days
                 FROM estimate_items
                 WHERE estimate_id = ?
                 GROUP BY category
@@ -1455,20 +1455,19 @@ class ViewPlanWindow:
             prozhivanie = 0
             sutochnie = 0
             days = 0
-            people_count = 1
             
-            for category, total, day_count, people in items:
+            for category, total, day_count in items:
                 if category == 'Проезд':
                     proezd = total
-                    people_count = people or people_count
                 elif category == 'Проживание':
                     prozhivanie = total
                     days = day_count or days
-                    people_count = people or people_count
                 elif category == 'Суточные':
                     sutochnie = total
                     days = day_count or days
-                    people_count = people or people_count
+            
+            # Количество тренеров берём из поля event.trainers_count
+            people_count = event.trainers_count if event.trainers_count else 1
             
             # Если дни не определены, ставим по умолчанию
             if days == 0:
@@ -2009,7 +2008,7 @@ class ViewPlanWindow:
                     
                     # Получаем детали сметы
                     items = self.db.cursor.execute('''
-                        SELECT category, SUM(total) as total, MAX(days_count) as days, MAX(people_count) as people
+                        SELECT category, SUM(total) as total, MAX(days_count) as days
                         FROM estimate_items
                         WHERE estimate_id = ?
                         GROUP BY category
@@ -2019,20 +2018,19 @@ class ViewPlanWindow:
                     prozhivanie = 0
                     sutochnie = 0
                     days = 0
-                    people_count = 1
                     
-                    for category, total, day_count, people in items:
+                    for category, total, day_count in items:
                         if category == 'Проезд':
                             proezd = total
-                            people_count = people or people_count
                         elif category == 'Проживание':
                             prozhivanie = total
                             days = day_count or days
-                            people_count = people or people_count
                         elif category == 'Суточные':
                             sutochnie = total
                             days = day_count or days
-                            people_count = people or people_count
+                    
+                    # Количество тренеров берём из поля event.trainers_count
+                    people_count = event.trainers_count if event.trainers_count else 1
                     
                     if days == 0:
                         days = 5
@@ -2828,7 +2826,7 @@ class ViewPlanWindow:
                 
                 # Получаем детали сметы
                 items = self.db.cursor.execute('''
-                    SELECT category, SUM(total) as total, MAX(days_count) as days, MAX(people_count) as people
+                    SELECT category, SUM(total) as total, MAX(days_count) as days
                     FROM estimate_items
                     WHERE estimate_id = ?
                     GROUP BY category
@@ -2838,20 +2836,19 @@ class ViewPlanWindow:
                 prozhivanie = 0
                 sutochnie = 0
                 days = 0
-                people_count = 1
                 
-                for category, total, day_count, people in items:
+                for category, total, day_count in items:
                     if category == 'Проезд':
                         proezd = total
-                        people_count = people or people_count
                     elif category == 'Проживание':
                         prozhivanie = total
                         days = day_count or days
-                        people_count = people or people_count
                     elif category == 'Суточные':
                         sutochnie = total
                         days = day_count or days
-                        people_count = people or people_count
+                
+                # Количество тренеров берём из поля event.trainers_count
+                people_count = event.trainers_count if event.trainers_count else 1
                 
                 if days == 0:
                     days = 5
