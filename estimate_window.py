@@ -488,7 +488,7 @@ class EstimateEditDialog:
         
         # Статьи расходов
         items_frame = ttk.LabelFrame(self.window, text="Статьи расходов", padding="10")
-        items_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        items_frame.pack(fill=tk.X, padx=10, pady=5)  # Убрали expand=True
         
         # Кнопки добавления статей
         btn_frame = ttk.Frame(items_frame)
@@ -499,9 +499,9 @@ class EstimateEditDialog:
         ttk.Button(btn_frame, text="➕ Суточные", command=lambda: self._add_item('Суточные')).pack(side=tk.LEFT, padx=2)
         ttk.Button(btn_frame, text="➕ Питание", command=lambda: self._add_item('Питание')).pack(side=tk.LEFT, padx=2)
         
-        # Таблица статей
+        # Таблица статей (уменьшена до 5 строк, т.к. обычно не больше 5 статей)
         columns = ('category', 'description', 'people', 'days', 'rate', 'total')
-        self.items_tree = ttk.Treeview(items_frame, columns=columns, show='headings', height=10)
+        self.items_tree = ttk.Treeview(items_frame, columns=columns, show='headings', height=5)
         
         self.items_tree.heading('category', text='Категория')
         self.items_tree.heading('description', text='Описание/Маршрут')
@@ -520,7 +520,7 @@ class EstimateEditDialog:
         scrollbar = ttk.Scrollbar(items_frame, orient=tk.VERTICAL, command=self.items_tree.yview)
         self.items_tree.configure(yscrollcommand=scrollbar.set)
         
-        self.items_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.items_tree.pack(side=tk.LEFT, fill=tk.BOTH)  # Убрали expand=True
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
         # Двойной клик для редактирования
