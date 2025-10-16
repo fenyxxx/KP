@@ -795,7 +795,10 @@ class EstimateItemDialog:
         self.rate_var = tk.DoubleVar(value=self.rate)
         rate_entry = ttk.Entry(main_frame, textvariable=self.rate_var, width=15)
         rate_entry.grid(row=4, column=1, sticky='w', pady=5)
-        rate_entry.bind('<KeyRelease>', lambda e: self._calculate_total())
+        # Пересчитываем сумму при вводе, но без округления ставки
+        rate_entry.bind('<KeyRelease>', lambda e: self._calculate_total(round_rate=False))
+        # Округляем ставку только при потере фокуса
+        rate_entry.bind('<FocusOut>', lambda e: self._round_and_calculate())
         
         # Сумма
         ttk.Label(main_frame, text="Итого:").grid(row=5, column=0, sticky='w', pady=5)
@@ -811,29 +814,42 @@ class EstimateItemDialog:
         create_styled_button(button_frame, "Сохранить", self._save, 'primary').pack(side=tk.LEFT, padx=5)
         create_styled_button(button_frame, "Отмена", self.window.destroy, 'normal').pack(side=tk.LEFT, padx=5)
     
-    def _calculate_total(self):
-        """Рассчитать итоговую сумму (ставка округляется в большую сторону до 10)"""
+    def _calculate_total(self, round_rate=True):
+        """Рассчитать итоговую сумму"""
         try:
             people = self.people_var.get()
             days = self.days_var.get()
             rate_raw = self.rate_var.get()
-            # Округляем ставку в большую сторону до 10
-            rate_rounded = round_up_to_10(rate_raw)
-            # Обновляем отображение ставки, если она изменилась
-            if rate_rounded != rate_raw:
-                self.rate_var.set(rate_rounded)
-            # Итоговая сумма = люди * дни * округленная ставка
-            self.total = people * days * rate_rounded
+            
+            if round_rate:
+                # Округляем ставку в большую сторону до 10
+                rate_rounded = round_up_to_10(rate_raw)
+                # Обновляем отображение ставки, если она изменилась
+                if rate_rounded != rate_raw:
+                    self.rate_var.set(rate_rounded)
+                # Итоговая сумма = люди * дни * округленная ставка
+                self.total = people * days * rate_rounded
+            else:
+                # Просто показываем итог без округления (для предварительного просмотра)
+                self.total = people * days * rate_raw
+            
             self.total_label.config(text=f"{self.total:,.2f} руб.".replace(',', ' '))
         except:
             pass
     
+    def _round_and_calculate(self):
+        """Округлить ставку и пересчитать итог (вызывается при потере фокуса)"""
+        self._calculate_total(round_rate=True)
+    
     def _save(self):
         """Сохранить статью"""
+        # Сначала округляем ставку
+        self._round_and_calculate()
+        
         self.description = self.desc_var.get()
         self.people_count = self.people_var.get()
         self.days_count = self.days_var.get()
-        self.rate = self.rate_var.get()
+        self.rate = self.rate_var.get()  # Уже округленное значение
         self.result = True
         self.window.destroy()
 
