@@ -1222,15 +1222,15 @@ class ViewPlanWindow:
         internal_events = [e for e in events if e.event_type == "Внутреннее"]
         
         report_text = ""
-        report_text += "=" * 180 + "\n"
+        report_text += "=" * 200 + "\n"
         report_text += f"РАСЧЕТ ПЛАНОВЫХ ЗАТРАТ НА {self.year} ГОД\n"
         report_text += f"НА ПРОВЕДЕНИЕ КУЛЬТУРНО-МАССОВЫХ МЕРОПРИЯТИЙ ДЮСК \"ЯМБУРГ\" ППО \"ГАЗПРОМ ДОБЫЧА ЯМБУРГ ПРОФСОЮЗ\"\n"
-        report_text += "=" * 180 + "\n\n"
+        report_text += "=" * 200 + "\n\n"
         
         # Заголовок таблицы
-        report_text += f"{'№':<6} {'Наименование статей затрат/Мероприятий':<60} {'Место/Ед.изм.':<20} {'Даты/Кол-во':<12} {'Стоим.':<10} {'Чел.':<5} "
+        report_text += f"{'№':<6} {'Вид спорта':<20} {'Наименование статей затрат/Мероприятий':<60} {'Место/Ед.изм.':<20} {'Даты/Кол-во':<12} {'Стоим.':<10} {'Чел.':<5} "
         report_text += f"{'Затраты (руб)':>15} {'1 кв.':>15} {'2 кв.':>15} {'3 кв.':>15} {'4 кв.':>15}\n"
-        report_text += "=" * 180 + "\n\n"
+        report_text += "=" * 200 + "\n\n"
         
         # Определяем месяцы по кварталам
         q1_months = ['Январь', 'Февраль', 'Март']
@@ -1248,7 +1248,7 @@ class ViewPlanWindow:
         # Раздел 1: Выездные мероприятия
         if away_events:
             report_text += "1.   ВЫЕЗДНЫЕ МЕРОПРИЯТИЯ\n"
-            report_text += "-" * 180 + "\n\n"
+            report_text += "-" * 200 + "\n\n"
             
             # Предварительный расчёт итогов по выездным
             away_q_totals = {1: 0, 2: 0, 3: 0, 4: 0}
@@ -1259,10 +1259,10 @@ class ViewPlanWindow:
                 away_total += event.children_budget
             
             # Синяя итоговая строка с суммами по кварталам
-            report_text += f"{'':<101} "
+            report_text += f"{'':<121} "
             report_text += f"{format_rubles(away_total):>15} {format_rubles(away_q_totals[1]):>15} {format_rubles(away_q_totals[2]):>15} "
             report_text += f"{format_rubles(away_q_totals[3]):>15} {format_rubles(away_q_totals[4]):>15}\n"
-            report_text += "-" * 180 + "\n\n"
+            report_text += "-" * 200 + "\n\n"
             
             q_totals = {1: 0, 2: 0, 3: 0, 4: 0}
             total_all = 0
@@ -1279,7 +1279,8 @@ class ViewPlanWindow:
                         break
                 
                 # Название мероприятия (с трёхзначной нумерацией: 1.001, 1.002, и т.д.)
-                report_text += f"1.{idx:03d}  {event.name[:57]:<60} {event.location:<20} {event.month:<12} {'':>10} {'':>5} "
+                sport_upper = event.sport.upper() if event.sport else ""
+                report_text += f"1.{idx:03d}  {sport_upper[:18]:<20} {event.name[:57]:<60} {event.location:<20} {event.month:<12} {'':>10} {'':>5} "
                 q_vals = [''] * 4
                 q_vals[quarter-1] = format_rubles(event.children_budget)
                 report_text += f"{format_rubles(event.children_budget):>15} {q_vals[0]:>15} {q_vals[1]:>15} {q_vals[2]:>15} {q_vals[3]:>15}\n"
@@ -1299,25 +1300,25 @@ class ViewPlanWindow:
                         
                         # Форматируем вывод
                         if category == "Проезд":
-                            report_text += f"       {category:<57} {description:<20} {days_count:<12} {rate:>10.0f} {people_count:<5}\n"
+                            report_text += f"       {'':<20} {category:<57} {description:<20} {days_count:<12} {rate:>10.0f} {people_count:<5}\n"
                         elif category == "Проживание":
-                            report_text += f"       {category:<57} {'дн':<20} {days_count:<12} {rate:>10.0f} {people_count:<5}\n"
+                            report_text += f"       {'':<20} {category:<57} {'дн':<20} {days_count:<12} {rate:>10.0f} {people_count:<5}\n"
                         elif category == "Суточные":
-                            report_text += f"       {category:<57} {'дн':<20} {days_count:<12} {rate:>10.0f} {people_count:<5}\n"
+                            report_text += f"       {'':<20} {category:<57} {'дн':<20} {days_count:<12} {rate:>10.0f} {people_count:<5}\n"
                 
                 report_text += "\n"
                 q_totals[quarter] += event.children_budget
                 total_all += event.children_budget
             
-            report_text += f"{'ИТОГО выездные:':<101} "
+            report_text += f"{'ИТОГО выездные:':<121} "
             report_text += f"{format_rubles(total_all):>15} {format_rubles(q_totals[1]):>15} {format_rubles(q_totals[2]):>15} "
             report_text += f"{format_rubles(q_totals[3]):>15} {format_rubles(q_totals[4]):>15}\n"
-            report_text += "\n" + "=" * 180 + "\n\n"
+            report_text += "\n" + "=" * 200 + "\n\n"
         
         # Раздел 2: Внутренние мероприятия
         if internal_events:
             report_text += "2.   ВНУТРЕННИЕ И ГОРОДСКИЕ МЕРОПРИЯТИЯ\n"
-            report_text += "-" * 180 + "\n\n"
+            report_text += "-" * 200 + "\n\n"
             
             # Предварительный расчёт итогов по внутренним
             internal_q_totals = {1: 0, 2: 0, 3: 0, 4: 0}
@@ -1328,10 +1329,10 @@ class ViewPlanWindow:
                 internal_total += event.children_budget
             
             # Синяя итоговая строка с суммами по кварталам
-            report_text += f"{'':<101} "
+            report_text += f"{'':<121} "
             report_text += f"{format_rubles(internal_total):>15} {format_rubles(internal_q_totals[1]):>15} {format_rubles(internal_q_totals[2]):>15} "
             report_text += f"{format_rubles(internal_q_totals[3]):>15} {format_rubles(internal_q_totals[4]):>15}\n"
-            report_text += "-" * 180 + "\n\n"
+            report_text += "-" * 200 + "\n\n"
             
             q_totals = {1: 0, 2: 0, 3: 0, 4: 0}
             total_all = 0
@@ -1348,7 +1349,8 @@ class ViewPlanWindow:
                         break
                 
                 # Название мероприятия (трёхзначная нумерация: 2.001, 2.002, и т.д.)
-                report_text += f"2.{idx:03d}  {event.name[:57]:<60} {event.location:<20} {event.month:<12} {'':>10} {'':>5} "
+                sport_upper = event.sport.upper() if event.sport else ""
+                report_text += f"2.{idx:03d}  {sport_upper[:18]:<20} {event.name[:57]:<60} {event.location:<20} {event.month:<12} {'':>10} {'':>5} "
                 q_vals = [''] * 4
                 q_vals[quarter-1] = format_rubles(event.children_budget)
                 report_text += f"{format_rubles(event.children_budget):>15} {q_vals[0]:>15} {q_vals[1]:>15} {q_vals[2]:>15} {q_vals[3]:>15}\n"
@@ -1367,17 +1369,17 @@ class ViewPlanWindow:
                         total = item[7] or 0
                         
                         # Форматируем вывод - для внутренних выводим категорию и описание
-                        report_text += f"       {category:<57} {description[:20]:<20} {days_count:<12} {rate:>10.0f} {people_count:<5}\n"
+                        report_text += f"       {'':<20} {category:<57} {description[:20]:<20} {days_count:<12} {rate:>10.0f} {people_count:<5}\n"
                 
                 report_text += "\n"
                 q_totals[quarter] += event.children_budget
                 total_all += event.children_budget
             
             report_text += "\n"
-            report_text += f"{'ИТОГО внутренние:':<101} "
+            report_text += f"{'ИТОГО внутренние:':<121} "
             report_text += f"{format_rubles(total_all):>15} {format_rubles(q_totals[1]):>15} {format_rubles(q_totals[2]):>15} "
             report_text += f"{format_rubles(q_totals[3]):>15} {format_rubles(q_totals[4]):>15}\n"
-            report_text += "\n" + "=" * 180 + "\n\n"
+            report_text += "\n" + "=" * 200 + "\n\n"
         
         # Общий итог
         grand_total = sum(e.children_budget for e in events)
@@ -1386,10 +1388,10 @@ class ViewPlanWindow:
             quarter = get_quarter(event.month)
             grand_q_totals[quarter] += event.children_budget
         
-        report_text += f"{'ВСЕГО ИТОГО:':<101} "
+        report_text += f"{'ВСЕГО ИТОГО:':<121} "
         report_text += f"{format_rubles(grand_total):>15} {format_rubles(grand_q_totals[1]):>15} {format_rubles(grand_q_totals[2]):>15} "
         report_text += f"{format_rubles(grand_q_totals[3]):>15} {format_rubles(grand_q_totals[4]):>15}\n"
-        report_text += "=" * 180 + "\n"
+        report_text += "=" * 200 + "\n"
         
         self.text_area.insert('1.0', report_text)
     
@@ -1770,7 +1772,7 @@ class ViewPlanWindow:
             
             elif self.current_report_type == 'annual_ppo':
                 writer.writerow([
-                    '№', 'Тип', 'Название', 'Место', 'Месяц', 'Затраты (руб)', '1 кв.', '2 кв.', '3 кв.', '4 кв.',
+                    '№', 'Вид спорта', 'Тип', 'Название', 'Место', 'Месяц', 'Затраты (руб)', '1 кв.', '2 кв.', '3 кв.', '4 кв.',
                     'Категория расходов', 'Описание/Маршрут', 'Дни/Кол-во', 'Ставка', 'Человек', 'Сумма'
                 ])
                 
@@ -1789,7 +1791,7 @@ class ViewPlanWindow:
                 # 1. ВЫЕЗДНЫЕ МЕРОПРИЯТИЯ
                 if away_events_csv:
                     # Заголовок секции
-                    writer.writerow(['', '1. ВЫЕЗДНЫЕ МЕРОПРИЯТИЯ', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])
+                    writer.writerow(['', '1. ВЫЕЗДНЫЕ МЕРОПРИЯТИЯ', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])
                     
                     # Предварительный расчёт итогов
                     away_q_totals_csv = {1: 0, 2: 0, 3: 0, 4: 0}
@@ -1801,7 +1803,7 @@ class ViewPlanWindow:
                     
                     # Итоговая строка
                     writer.writerow([
-                        '', '', '', '', '', 
+                        '', '', '', '', '', '',
                         format_number_ru(away_total_csv),
                         format_number_ru(away_q_totals_csv[1]),
                         format_number_ru(away_q_totals_csv[2]),
@@ -1825,8 +1827,10 @@ class ViewPlanWindow:
                                 break
                         
                         # Строка мероприятия
+                        sport_upper = event.sport.upper() if event.sport else ""
                         writer.writerow([
                             f"1.{idx:03d}",
+                            sport_upper,
                             event.event_type,
                             event.name,
                             event.location,
@@ -1850,7 +1854,7 @@ class ViewPlanWindow:
                                 total = item[7] or 0
                                 
                                 writer.writerow([
-                                    '', '', '', '', '', '', '', '', '', '',
+                                    '', '', '', '', '', '', '', '', '', '', '',
                                     category,
                                     description,
                                     days_count,
@@ -1862,7 +1866,7 @@ class ViewPlanWindow:
                 # 2. ВНУТРЕННИЕ МЕРОПРИЯТИЯ
                 if internal_events_csv:
                     # Заголовок секции
-                    writer.writerow(['', '2. ВНУТРЕННИЕ И ГОРОДСКИЕ МЕРОПРИЯТИЯ', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])
+                    writer.writerow(['', '2. ВНУТРЕННИЕ И ГОРОДСКИЕ МЕРОПРИЯТИЯ', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])
                     
                     # Предварительный расчёт итогов
                     internal_q_totals_csv = {1: 0, 2: 0, 3: 0, 4: 0}
@@ -1874,7 +1878,7 @@ class ViewPlanWindow:
                     
                     # Итоговая строка
                     writer.writerow([
-                        '', '', '', '', '',
+                        '', '', '', '', '', '',
                         format_number_ru(internal_total_csv),
                         format_number_ru(internal_q_totals_csv[1]),
                         format_number_ru(internal_q_totals_csv[2]),
@@ -1898,8 +1902,10 @@ class ViewPlanWindow:
                                 break
                         
                         # Строка мероприятия
+                        sport_upper = event.sport.upper() if event.sport else ""
                         writer.writerow([
                             f"2.{idx:03d}",
+                            sport_upper,
                             event.event_type,
                             event.name,
                             event.location,
@@ -1923,7 +1929,7 @@ class ViewPlanWindow:
                                 total = item[7] or 0
                                 
                                 writer.writerow([
-                                    '', '', '', '', '', '', '', '', '', '',
+                                    '', '', '', '', '', '', '', '', '', '', '',
                                     category,
                                     description,
                                     days_count,
@@ -2434,6 +2440,7 @@ class ViewPlanWindow:
         <thead>
             <tr>
                 <th>№</th>
+                <th>Вид спорта</th>
                 <th>Наименование статей затрат/Мероприятий</th>
                 <th>Место/Ед.изм.</th>
                 <th>Даты/Кол-во</th>
@@ -2464,7 +2471,7 @@ class ViewPlanWindow:
             if away_events:
                 html_content += """
             <tr style="background-color: #e6f3ff;">
-                <td colspan="11"><strong>1. ВЫЕЗДНЫЕ МЕРОПРИЯТИЯ</strong></td>
+                <td colspan="12"><strong>1. ВЫЕЗДНЫЕ МЕРОПРИЯТИЯ</strong></td>
             </tr>
 """
                 
@@ -2479,7 +2486,7 @@ class ViewPlanWindow:
                 # Синяя итоговая строка с суммами по кварталам
                 html_content += f"""
             <tr style="background-color: #0066B3; color: white; font-weight: bold;">
-                <td colspan="6"></td>
+                <td colspan="7"></td>
                 <td>{format_number_ru(away_total_html)}</td>
                 <td>{format_number_ru(away_q_totals_html[1])}</td>
                 <td>{format_number_ru(away_q_totals_html[2])}</td>
@@ -2504,9 +2511,11 @@ class ViewPlanWindow:
                     q_vals[quarter-1] = format_number_ru(event.children_budget)
                     
                     # Название мероприятия (с трёхзначной нумерацией: 1.001, 1.002, и т.д.)
+                    sport_upper = event.sport.upper() if event.sport else ""
                     html_content += f"""
             <tr style="font-weight: bold;">
                 <td>1.{idx:03d}</td>
+                <td>{html.escape(sport_upper)}</td>
                 <td>{html.escape(event.name[:60])}</td>
                 <td>{html.escape(event.location)}</td>
                 <td>{html.escape(event.month)}</td>
@@ -2537,6 +2546,7 @@ class ViewPlanWindow:
                                 html_content += f"""
             <tr>
                 <td></td>
+                <td></td>
                 <td style="padding-left: 30px;">{category}</td>
                 <td>{html.escape(description)}</td>
                 <td>{days_count}</td>
@@ -2553,6 +2563,7 @@ class ViewPlanWindow:
                                 html_content += f"""
             <tr>
                 <td></td>
+                <td></td>
                 <td style="padding-left: 30px;">{category}</td>
                 <td>дн</td>
                 <td>{days_count}</td>
@@ -2568,6 +2579,7 @@ class ViewPlanWindow:
                             elif category == "Суточные":
                                 html_content += f"""
             <tr>
+                <td></td>
                 <td></td>
                 <td style="padding-left: 30px;">{category}</td>
                 <td>дн</td>
@@ -2586,7 +2598,7 @@ class ViewPlanWindow:
             if internal_events:
                 html_content += """
             <tr style="background-color: #e6f3ff;">
-                <td colspan="11"><strong>2. ВНУТРЕННИЕ И ГОРОДСКИЕ МЕРОПРИЯТИЯ</strong></td>
+                <td colspan="12"><strong>2. ВНУТРЕННИЕ И ГОРОДСКИЕ МЕРОПРИЯТИЯ</strong></td>
             </tr>
 """
                 
@@ -2601,7 +2613,7 @@ class ViewPlanWindow:
                 # Синяя итоговая строка с суммами по кварталам
                 html_content += f"""
             <tr style="background-color: #0066B3; color: white; font-weight: bold;">
-                <td colspan="6"></td>
+                <td colspan="7"></td>
                 <td>{format_number_ru(internal_total_html)}</td>
                 <td>{format_number_ru(internal_q_totals_html[1])}</td>
                 <td>{format_number_ru(internal_q_totals_html[2])}</td>
@@ -2626,9 +2638,11 @@ class ViewPlanWindow:
                     q_vals[quarter-1] = format_number_ru(event.children_budget)
                     
                     # Название мероприятия (с трёхзначной нумерацией: 2.001, 2.002, и т.д.)
+                    sport_upper = event.sport.upper() if event.sport else ""
                     html_content += f"""
             <tr style="font-weight: bold;">
                 <td>2.{idx:03d}</td>
+                <td>{html.escape(sport_upper)}</td>
                 <td>{html.escape(event.name[:60])}</td>
                 <td>{html.escape(event.location)}</td>
                 <td>{html.escape(event.month)}</td>
@@ -2657,6 +2671,7 @@ class ViewPlanWindow:
                             # Форматируем вывод - для внутренних выводим категорию и описание
                             html_content += f"""
             <tr>
+                <td></td>
                 <td></td>
                 <td style="padding-left: 30px;">{category}</td>
                 <td>{html.escape(description)}</td>
