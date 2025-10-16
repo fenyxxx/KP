@@ -1444,7 +1444,7 @@ class ViewPlanWindow:
             
             # Получаем детали сметы (проезд, проживание, суточные)
             items = self.db.cursor.execute('''
-                SELECT category, SUM(total) as total, MAX(days_count) as days
+                SELECT category, SUM(total) as total, MAX(days_count) as days, MAX(people_count) as people
                 FROM estimate_items
                 WHERE estimate_id = ?
                 GROUP BY category
@@ -1454,20 +1454,30 @@ class ViewPlanWindow:
             prozhivanie = 0
             sutochnie = 0
             days = 0
+            people_count = 1
             
-            for category, total, day_count in items:
+            for category, total, day_count, people in items:
                 if category == 'Проезд':
                     proezd = total
+                    people_count = people or people_count
                 elif category == 'Проживание':
                     prozhivanie = total
                     days = day_count or days
+                    people_count = people or people_count
                 elif category == 'Суточные':
                     sutochnie = total
                     days = day_count or days
+                    people_count = people or people_count
             
             # Если дни не определены, ставим по умолчанию
             if days == 0:
                 days = 5
+            
+            # Определяем должность в зависимости от количества тренеров
+            if people_count >= 2:
+                position = "Старший тренер, Тренер"
+            else:
+                position = "Старший тренер"
             
             # Формируем цель командировки
             purpose = f"Сопровождение спортсменов для участия в {event.name} по виду спорта {event.sport}"
@@ -1491,7 +1501,7 @@ class ViewPlanWindow:
                 economy = f"{'-':>12}"
             
             # Печатаем строку
-            report_text += f"{'Тренер':<20} {event.month:<12} {days:<6} {event.location[:24]:<25} "
+            report_text += f"{position:<20} {event.month:<12} {days:<6} {event.location[:24]:<25} "
             report_text += f"{purpose:<50} {proezd:>12.2f} {prozhivanie:>12.2f} {sutochnie:>12.2f} "
             report_text += f"{event_total:>12.2f} {fact} {economy}\n"
             
@@ -1967,7 +1977,7 @@ class ViewPlanWindow:
                     
                     # Получаем детали сметы
                     items = self.db.cursor.execute('''
-                        SELECT category, SUM(total) as total, MAX(days_count) as days
+                        SELECT category, SUM(total) as total, MAX(days_count) as days, MAX(people_count) as people
                         FROM estimate_items
                         WHERE estimate_id = ?
                         GROUP BY category
@@ -1977,19 +1987,29 @@ class ViewPlanWindow:
                     prozhivanie = 0
                     sutochnie = 0
                     days = 0
+                    people_count = 1
                     
-                    for category, total, day_count in items:
+                    for category, total, day_count, people in items:
                         if category == 'Проезд':
                             proezd = total
+                            people_count = people or people_count
                         elif category == 'Проживание':
                             prozhivanie = total
                             days = day_count or days
+                            people_count = people or people_count
                         elif category == 'Суточные':
                             sutochnie = total
                             days = day_count or days
+                            people_count = people or people_count
                     
                     if days == 0:
                         days = 5
+                    
+                    # Определяем должность в зависимости от количества тренеров
+                    if people_count >= 2:
+                        position = "Старший тренер, Тренер"
+                    else:
+                        position = "Старший тренер"
                     
                     # Формируем цель командировки
                     purpose = f"Сопровождение спортсменов для участия в {event.name} по виду спорта {event.sport}"
@@ -2007,7 +2027,7 @@ class ViewPlanWindow:
                         economy_str = format_number_ru(economy_amount)
                     
                     writer.writerow([
-                        'Тренер',
+                        position,
                         event.month,
                         days,
                         event.location,
@@ -2743,7 +2763,7 @@ class ViewPlanWindow:
                 
                 # Получаем детали сметы
                 items = self.db.cursor.execute('''
-                    SELECT category, SUM(total) as total, MAX(days_count) as days
+                    SELECT category, SUM(total) as total, MAX(days_count) as days, MAX(people_count) as people
                     FROM estimate_items
                     WHERE estimate_id = ?
                     GROUP BY category
@@ -2753,19 +2773,29 @@ class ViewPlanWindow:
                 prozhivanie = 0
                 sutochnie = 0
                 days = 0
+                people_count = 1
                 
-                for category, total, day_count in items:
+                for category, total, day_count, people in items:
                     if category == 'Проезд':
                         proezd = total
+                        people_count = people or people_count
                     elif category == 'Проживание':
                         prozhivanie = total
                         days = day_count or days
+                        people_count = people or people_count
                     elif category == 'Суточные':
                         sutochnie = total
                         days = day_count or days
+                        people_count = people or people_count
                 
                 if days == 0:
                     days = 5
+                
+                # Определяем должность в зависимости от количества тренеров
+                if people_count >= 2:
+                    position = "Старший тренер, Тренер"
+                else:
+                    position = "Старший тренер"
                 
                 # Формируем цель командировки
                 purpose = f"Сопровождение спортсменов для участия в {event.name} по виду спорта {event.sport}"
@@ -2785,7 +2815,7 @@ class ViewPlanWindow:
                 
                 html_content += f"""
             <tr>
-                <td>Тренер</td>
+                <td>{html.escape(position)}</td>
                 <td>{html.escape(event.month)}</td>
                 <td>{days}</td>
                 <td>{html.escape(event.location)}</td>
