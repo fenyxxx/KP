@@ -330,7 +330,7 @@ class EstimateWindow:
 """
         
         item_number = 1
-        category_order = ['Проезд', 'Проживание', 'Суточные', 'Питание']
+        category_order = ['Проезд', 'Проживание', 'Суточные', 'Питание', 'Другое']
         
         for category in category_order:
             if category in categories:
@@ -498,6 +498,7 @@ class EstimateEditDialog:
         ttk.Button(btn_frame, text="➕ Проживание", command=lambda: self._add_item('Проживание')).pack(side=tk.LEFT, padx=2)
         ttk.Button(btn_frame, text="➕ Суточные", command=lambda: self._add_item('Суточные')).pack(side=tk.LEFT, padx=2)
         ttk.Button(btn_frame, text="➕ Питание", command=lambda: self._add_item('Питание')).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_frame, text="➕ Другое", command=lambda: self._add_item('Другое')).pack(side=tk.LEFT, padx=2)
         
         # Таблица статей (уменьшена до 5 строк, т.к. обычно не больше 5 статей)
         columns = ('category', 'description', 'people', 'days', 'rate', 'total')
