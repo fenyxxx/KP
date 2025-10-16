@@ -1313,14 +1313,40 @@ class ViewPlanWindow:
             
             for idx, event in enumerate(internal_events, 1):
                 quarter = get_quarter(event.month)
-                q_totals[quarter] += event.children_budget
-                total_all += event.children_budget
                 
-                # Название мероприятия (внутренние без детализации, трёхзначная нумерация: 2.001, 2.002, и т.д.)
+                # Получаем смету ППО для мероприятия
+                estimates = self.db.get_estimates_by_event(event.id)
+                ppo_estimate = None
+                for est in estimates:
+                    if est[2] == 'ППО':  # estimate_type
+                        ppo_estimate = est
+                        break
+                
+                # Название мероприятия (трёхзначная нумерация: 2.001, 2.002, и т.д.)
                 report_text += f"2.{idx:03d}  {event.name[:57]:<60} {event.location:<20} {event.month:<12} {'':>10} {'':>5} "
                 q_vals = [''] * 4
                 q_vals[quarter-1] = format_rubles(event.children_budget)
                 report_text += f"{format_rubles(event.children_budget):>15} {q_vals[0]:>15} {q_vals[1]:>15} {q_vals[2]:>15} {q_vals[3]:>15}\n"
+                
+                # Детализация по смете
+                if ppo_estimate:
+                    estimate_id = ppo_estimate[0]
+                    items = self.db.get_estimate_items(estimate_id)
+                    
+                    for item in items:
+                        category = item[2]
+                        description = item[3] or ''
+                        people_count = item[4] or 0
+                        days_count = item[5] or 0
+                        rate = item[6] or 0
+                        total = item[7] or 0
+                        
+                        # Форматируем вывод - для внутренних выводим категорию и описание
+                        report_text += f"       {category:<57} {description[:20]:<20} {days_count:<12} {rate:>10.0f} {people_count:<5}\n"
+                
+                report_text += "\n"
+                q_totals[quarter] += event.children_budget
+                total_all += event.children_budget
             
             report_text += "\n"
             report_text += f"{'ИТОГО внутренние:':<101} "
@@ -1838,6 +1864,15 @@ class ViewPlanWindow:
                         q_vals = ['', '', '', '']
                         q_vals[quarter-1] = f"{event.children_budget:.2f}"
                         
+                        # Получаем смету ППО
+                        estimates = self.db.get_estimates_by_event(event.id)
+                        ppo_estimate = None
+                        for est in estimates:
+                            if est[2] == 'ППО':
+                                ppo_estimate = est
+                                break
+                        
+                        # Строка мероприятия
                         writer.writerow([
                             f"2.{idx:03d}",
                             event.event_type,
@@ -1848,6 +1883,29 @@ class ViewPlanWindow:
                             q_vals[0], q_vals[1], q_vals[2], q_vals[3],
                             '', '', '', '', '', ''
                         ])
+                        
+                        # Детализация по смете
+                        if ppo_estimate:
+                            estimate_id = ppo_estimate[0]
+                            items = self.db.get_estimate_items(estimate_id)
+                            
+                            for item in items:
+                                category = item[2]
+                                description = item[3] or ''
+                                days_count = item[5] or 0
+                                rate = item[6] or 0
+                                people_count = item[4] or 0
+                                total = item[7] or 0
+                                
+                                writer.writerow([
+                                    '', '', '', '', '', '', '', '', '', '',
+                                    category,
+                                    description,
+                                    days_count,
+                                    f"{rate:.2f}",
+                                    people_count,
+                                    f"{total:.2f}"
+                                ])
             
             elif self.current_report_type == 'annual_uevp':
                 writer.writerow([
@@ -2529,11 +2587,22 @@ class ViewPlanWindow:
                 
                 for idx, event in enumerate(internal_events, 1):
                     quarter = q_map.get(event.month, 1)
+                    
+                    # Получаем смету ППО
+                    estimates = self.db.get_estimates_by_event(event.id)
+                    ppo_estimate = None
+                    for est in estimates:
+                        if est[2] == 'ППО':  # estimate_type
+                            ppo_estimate = est
+                            break
+                    
+                    # Заполняем кварталы
                     q_vals = ['', '', '', '']
                     q_vals[quarter-1] = f"{event.children_budget:.2f}"
                     
+                    # Название мероприятия (с трёхзначной нумерацией: 2.001, 2.002, и т.д.)
                     html_content += f"""
-            <tr>
+            <tr style="font-weight: bold;">
                 <td>2.{idx:03d}</td>
                 <td>{html.escape(event.name[:60])}</td>
                 <td>{html.escape(event.location)}</td>
@@ -2545,6 +2614,35 @@ class ViewPlanWindow:
                 <td>{q_vals[1]}</td>
                 <td>{q_vals[2]}</td>
                 <td>{q_vals[3]}</td>
+            </tr>
+"""
+                    
+                    # Детализация по смете
+                    if ppo_estimate:
+                        estimate_id = ppo_estimate[0]
+                        items = self.db.get_estimate_items(estimate_id)
+                        
+                        for item in items:
+                            category = item[2]
+                            description = item[3] or ''
+                            people_count = item[4] or 0
+                            days_count = item[5] or 0
+                            rate = item[6] or 0
+                            
+                            # Форматируем вывод - для внутренних выводим категорию и описание
+                            html_content += f"""
+            <tr>
+                <td></td>
+                <td style="padding-left: 30px;">{category}</td>
+                <td>{html.escape(description)}</td>
+                <td>{days_count}</td>
+                <td>{rate:.0f}</td>
+                <td>{people_count}</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
             </tr>
 """
             
