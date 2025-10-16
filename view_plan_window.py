@@ -1473,11 +1473,28 @@ class ViewPlanWindow:
             if days == 0:
                 days = 5
             
-            # Определяем должность в зависимости от количества тренеров
-            if people_count >= 2:
-                position = "Старший тренер, Тренер"
+            # Определяем должности в зависимости от вида спорта
+            sport_upper = event.sport.upper() if event.sport else ""
+            
+            # Определяем должности по виду спорта
+            if "КИОКУСИНКАЙ" in sport_upper or "ЛЫЖН" in sport_upper:
+                # Только тренер
+                positions = ["Тренер"] * people_count
+            elif "ПЛАВАНИЕ" in sport_upper or "НАСТОЛЬНЫЙ ТЕННИС" in sport_upper or "ФУТЗАЛ" in sport_upper:
+                # Старший тренер и Тренер
+                if people_count >= 2:
+                    positions = ["Старший тренер", "Тренер"]
+                else:
+                    positions = ["Тренер"]
+            elif "БОКС" in sport_upper or "ТАНЦЕВАЛЬНЫЙ" in sport_upper or "ВОЛЕЙБОЛ" in sport_upper:
+                # Только старшие тренеры
+                positions = ["Старший тренер"] * people_count
             else:
-                position = "Старший тренер"
+                # По умолчанию - старший тренер для первого, тренер для остальных
+                if people_count >= 2:
+                    positions = ["Старший тренер", "Тренер"]
+                else:
+                    positions = ["Старший тренер"]
             
             # Формируем цель командировки
             purpose = f"Сопровождение спортсменов для участия в {event.name} по виду спорта {event.sport}"
@@ -1500,10 +1517,25 @@ class ViewPlanWindow:
                 fact = f"{'-':>12}"
                 economy = f"{'-':>12}"
             
-            # Печатаем строку
-            report_text += f"{position:<20} {event.month:<12} {days:<6} {event.location[:24]:<25} "
-            report_text += f"{purpose:<50} {proezd:>12.2f} {prozhivanie:>12.2f} {sutochnie:>12.2f} "
-            report_text += f"{event_total:>12.2f} {fact} {economy}\n"
+            # Печатаем строку для каждого тренера
+            for idx, position in enumerate(positions):
+                # Делим расходы между тренерами
+                proezd_per_person = proezd / people_count
+                prozhivanie_per_person = prozhivanie / people_count
+                sutochnie_per_person = sutochnie / people_count
+                total_per_person = event_total / people_count
+                
+                # Для первого тренера показываем факт и экономию, для остальных - прочерки
+                if idx == 0:
+                    fact_display = fact
+                    economy_display = economy
+                else:
+                    fact_display = f"{'-':>12}"
+                    economy_display = f"{'-':>12}"
+                
+                report_text += f"{position:<20} {event.month:<12} {days:<6} {event.location[:24]:<25} "
+                report_text += f"{purpose:<50} {proezd_per_person:>12.2f} {prozhivanie_per_person:>12.2f} {sutochnie_per_person:>12.2f} "
+                report_text += f"{total_per_person:>12.2f} {fact_display} {economy_display}\n"
             
             total_proezd += proezd
             total_prozhivanie += prozhivanie
@@ -2005,11 +2037,28 @@ class ViewPlanWindow:
                     if days == 0:
                         days = 5
                     
-                    # Определяем должность в зависимости от количества тренеров
-                    if people_count >= 2:
-                        position = "Старший тренер, Тренер"
+                    # Определяем должности в зависимости от вида спорта
+                    sport_upper = event.sport.upper() if event.sport else ""
+                    
+                    # Определяем должности по виду спорта
+                    if "КИОКУСИНКАЙ" in sport_upper or "ЛЫЖН" in sport_upper:
+                        # Только тренер
+                        positions = ["Тренер"] * people_count
+                    elif "ПЛАВАНИЕ" in sport_upper or "НАСТОЛЬНЫЙ ТЕННИС" in sport_upper or "ФУТЗАЛ" in sport_upper:
+                        # Старший тренер и Тренер
+                        if people_count >= 2:
+                            positions = ["Старший тренер", "Тренер"]
+                        else:
+                            positions = ["Тренер"]
+                    elif "БОКС" in sport_upper or "ТАНЦЕВАЛЬНЫЙ" in sport_upper or "ВОЛЕЙБОЛ" in sport_upper:
+                        # Только старшие тренеры
+                        positions = ["Старший тренер"] * people_count
                     else:
-                        position = "Старший тренер"
+                        # По умолчанию - старший тренер для первого, тренер для остальных
+                        if people_count >= 2:
+                            positions = ["Старший тренер", "Тренер"]
+                        else:
+                            positions = ["Старший тренер"]
                     
                     # Формируем цель командировки
                     purpose = f"Сопровождение спортсменов для участия в {event.name} по виду спорта {event.sport}"
@@ -2026,19 +2075,35 @@ class ViewPlanWindow:
                         economy_amount = event_total - fact_amount
                         economy_str = format_number_ru(economy_amount)
                     
-                    writer.writerow([
-                        position,
-                        event.month,
-                        days,
-                        event.location,
-                        purpose,
-                        format_number_ru(proezd),
-                        format_number_ru(prozhivanie),
-                        format_number_ru(sutochnie),
-                        format_number_ru(event_total),
-                        fact_str,
-                        economy_str
-                    ])
+                    # Выводим строку для каждого тренера
+                    for idx, position in enumerate(positions):
+                        # Делим расходы между тренерами
+                        proezd_per_person = proezd / people_count
+                        prozhivanie_per_person = prozhivanie / people_count
+                        sutochnie_per_person = sutochnie / people_count
+                        total_per_person = event_total / people_count
+                        
+                        # Для первого тренера показываем факт и экономию, для остальных - прочерки
+                        if idx == 0:
+                            fact_display = fact_str
+                            economy_display = economy_str
+                        else:
+                            fact_display = ""
+                            economy_display = ""
+                        
+                        writer.writerow([
+                            position,
+                            event.month,
+                            days,
+                            event.location,
+                            purpose,
+                            format_number_ru(proezd_per_person),
+                            format_number_ru(prozhivanie_per_person),
+                            format_number_ru(sutochnie_per_person),
+                            format_number_ru(total_per_person),
+                            fact_display,
+                            economy_display
+                        ])
             
             else:  # 'full' и 'summary'
                 writer.writerow([
@@ -2791,11 +2856,28 @@ class ViewPlanWindow:
                 if days == 0:
                     days = 5
                 
-                # Определяем должность в зависимости от количества тренеров
-                if people_count >= 2:
-                    position = "Старший тренер, Тренер"
+                # Определяем должности в зависимости от вида спорта
+                sport_upper = event.sport.upper() if event.sport else ""
+                
+                # Определяем должности по виду спорта
+                if "КИОКУСИНКАЙ" in sport_upper or "ЛЫЖН" in sport_upper:
+                    # Только тренер
+                    positions = ["Тренер"] * people_count
+                elif "ПЛАВАНИЕ" in sport_upper or "НАСТОЛЬНЫЙ ТЕННИС" in sport_upper or "ФУТЗАЛ" in sport_upper:
+                    # Старший тренер и Тренер
+                    if people_count >= 2:
+                        positions = ["Старший тренер", "Тренер"]
+                    else:
+                        positions = ["Тренер"]
+                elif "БОКС" in sport_upper or "ТАНЦЕВАЛЬНЫЙ" in sport_upper or "ВОЛЕЙБОЛ" in sport_upper:
+                    # Только старшие тренеры
+                    positions = ["Старший тренер"] * people_count
                 else:
-                    position = "Старший тренер"
+                    # По умолчанию - старший тренер для первого, тренер для остальных
+                    if people_count >= 2:
+                        positions = ["Старший тренер", "Тренер"]
+                    else:
+                        positions = ["Старший тренер"]
                 
                 # Формируем цель командировки
                 purpose = f"Сопровождение спортсменов для участия в {event.name} по виду спорта {event.sport}"
@@ -2813,19 +2895,35 @@ class ViewPlanWindow:
                     economy_cell = format_number_ru(economy_amount)
                     total_fact += fact_amount
                 
-                html_content += f"""
+                # Выводим строку для каждого тренера
+                for idx, position in enumerate(positions):
+                    # Делим расходы между тренерами
+                    proezd_per_person = proezd / people_count
+                    prozhivanie_per_person = prozhivanie / people_count
+                    sutochnie_per_person = sutochnie / people_count
+                    total_per_person = event_total / people_count
+                    
+                    # Для первого тренера показываем факт и экономию, для остальных - прочерки
+                    if idx == 0:
+                        fact_display = fact_cell
+                        economy_display = economy_cell
+                    else:
+                        fact_display = "-"
+                        economy_display = "-"
+                    
+                    html_content += f"""
             <tr>
                 <td>{html.escape(position)}</td>
                 <td>{html.escape(event.month)}</td>
                 <td>{days}</td>
                 <td>{html.escape(event.location)}</td>
                 <td>{html.escape(purpose)}</td>
-                <td>{format_number_ru(proezd)}</td>
-                <td>{format_number_ru(prozhivanie)}</td>
-                <td>{format_number_ru(sutochnie)}</td>
-                <td>{format_number_ru(event_total)}</td>
-                <td>{fact_cell}</td>
-                <td>{economy_cell}</td>
+                <td>{format_number_ru(proezd_per_person)}</td>
+                <td>{format_number_ru(prozhivanie_per_person)}</td>
+                <td>{format_number_ru(sutochnie_per_person)}</td>
+                <td>{format_number_ru(total_per_person)}</td>
+                <td>{fact_display}</td>
+                <td>{economy_display}</td>
             </tr>
 """
                 
