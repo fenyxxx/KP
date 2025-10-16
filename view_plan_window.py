@@ -1417,9 +1417,9 @@ class ViewPlanWindow:
         report_text += "=" * 250 + "\n\n"
         
         # Заголовок таблицы
-        report_text += f"{'Должность':<20} {'Месяц':<12} {'Дни':<6} {'Город':<25} {'Цель командировки':<50} "
+        report_text += f"{'№':<5} {'Должность':<20} {'Месяц':<12} {'Дни':<6} {'Город':<25} {'Цель командировки':<50} "
         report_text += f"{'Проезд':>12} {'Проживание':>12} {'Суточные':>12} {'Итого':>12} {'Факт':>12} {'Эк/Пер':>12}\n"
-        report_text += "=" * 250 + "\n"
+        report_text += "=" * 255 + "\n"
         
         total_proezd = 0
         total_prozhivanie = 0
@@ -1427,6 +1427,7 @@ class ViewPlanWindow:
         total_all = 0
         total_fact = 0
         events_with_estimates_count = 0  # Счётчик мероприятий со сметами
+        row_number = 1  # Номер строки для отчёта
         
         # Собираем данные по каждому мероприятию
         for event in away_events:
@@ -1519,11 +1520,7 @@ class ViewPlanWindow:
             
             # Печатаем строку для каждого тренера
             for idx, position in enumerate(positions):
-                # Делим расходы между тренерами
-                proezd_per_person = proezd / people_count
-                prozhivanie_per_person = prozhivanie / people_count
-                sutochnie_per_person = sutochnie / people_count
-                total_per_person = event_total / people_count
+                # В смете уже указаны расходы на каждого тренера, поэтому НЕ делим
                 
                 # Для первого тренера показываем факт и экономию, для остальных - прочерки
                 if idx == 0:
@@ -1533,9 +1530,10 @@ class ViewPlanWindow:
                     fact_display = f"{'-':>12}"
                     economy_display = f"{'-':>12}"
                 
-                report_text += f"{position:<20} {event.month:<12} {days:<6} {event.location[:24]:<25} "
-                report_text += f"{purpose:<50} {proezd_per_person:>12.2f} {prozhivanie_per_person:>12.2f} {sutochnie_per_person:>12.2f} "
-                report_text += f"{total_per_person:>12.2f} {fact_display} {economy_display}\n"
+                report_text += f"{row_number:<5} {position:<20} {event.month:<12} {days:<6} {event.location[:24]:<25} "
+                report_text += f"{purpose:<50} {proezd:>12.2f} {prozhivanie:>12.2f} {sutochnie:>12.2f} "
+                report_text += f"{event_total:>12.2f} {fact_display} {economy_display}\n"
+                row_number += 1
             
             total_proezd += proezd
             total_prozhivanie += prozhivanie
@@ -1543,10 +1541,10 @@ class ViewPlanWindow:
             total_all += event_total
             events_with_estimates_count += 1  # Увеличиваем счётчик
         
-        report_text += "=" * 250 + "\n"
+        report_text += "=" * 255 + "\n"
         
         # Итого
-        report_text += f"{'ИТОГО:':<20} {'':<12} {'':<6} {'':<25} {'':<50} "
+        report_text += f"{'':<5} {'ИТОГО:':<20} {'':<12} {'':<6} {'':<25} {'':<50} "
         report_text += f"{total_proezd:>12.2f} {total_prozhivanie:>12.2f} {total_sutochnie:>12.2f} "
         report_text += f"{total_all:>12.2f} "
         
@@ -1556,7 +1554,7 @@ class ViewPlanWindow:
         else:
             report_text += f"{'-':>12} {'-':>12}\n"
         
-        report_text += "=" * 250 + "\n"
+        report_text += "=" * 255 + "\n"
         
         # Добавляем итоги
         report_text += "\n\nИтоги\n\n"
@@ -1989,10 +1987,12 @@ class ViewPlanWindow:
             
             elif self.current_report_type == 'annual_uevp':
                 writer.writerow([
-                    'Должность', 'Месяц', 'Количество дней', 'Город', 'Цель командировки',
+                    '№', 'Должность', 'Месяц', 'Количество дней', 'Город', 'Цель командировки',
                     'Расходы на проезд, руб.', 'Расходы на проживание, руб.', 'Суточные, руб.',
                     'Итого расходов, руб.', 'Фактические расходы', 'Экономия/перерасход'
                 ])
+                
+                row_number = 1  # Номер строки для CSV
                 
                 for event in filtered_events:
                     # Получаем смету УЭВП для мероприятия
@@ -2077,11 +2077,7 @@ class ViewPlanWindow:
                     
                     # Выводим строку для каждого тренера
                     for idx, position in enumerate(positions):
-                        # Делим расходы между тренерами
-                        proezd_per_person = proezd / people_count
-                        prozhivanie_per_person = prozhivanie / people_count
-                        sutochnie_per_person = sutochnie / people_count
-                        total_per_person = event_total / people_count
+                        # В смете уже указаны расходы на каждого тренера, поэтому НЕ делим
                         
                         # Для первого тренера показываем факт и экономию, для остальных - прочерки
                         if idx == 0:
@@ -2092,18 +2088,20 @@ class ViewPlanWindow:
                             economy_display = ""
                         
                         writer.writerow([
+                            row_number,
                             position,
                             event.month,
                             days,
                             event.location,
                             purpose,
-                            format_number_ru(proezd_per_person),
-                            format_number_ru(prozhivanie_per_person),
-                            format_number_ru(sutochnie_per_person),
-                            format_number_ru(total_per_person),
+                            format_number_ru(proezd),
+                            format_number_ru(prozhivanie),
+                            format_number_ru(sutochnie),
+                            format_number_ru(event_total),
                             fact_display,
                             economy_display
                         ])
+                        row_number += 1
             
             else:  # 'full' и 'summary'
                 writer.writerow([
@@ -2791,6 +2789,7 @@ class ViewPlanWindow:
     <table>
         <thead>
             <tr>
+                <th>№</th>
                 <th>Должность</th>
                 <th>Месяц</th>
                 <th>Дни</th>
@@ -2812,6 +2811,7 @@ class ViewPlanWindow:
             total_sutochnie = 0
             total_all = 0
             total_fact = 0
+            row_number = 1  # Номер строки для HTML
             
             for event in away_events:
                 # Получаем смету УЭВП для этого мероприятия
@@ -2897,11 +2897,7 @@ class ViewPlanWindow:
                 
                 # Выводим строку для каждого тренера
                 for idx, position in enumerate(positions):
-                    # Делим расходы между тренерами
-                    proezd_per_person = proezd / people_count
-                    prozhivanie_per_person = prozhivanie / people_count
-                    sutochnie_per_person = sutochnie / people_count
-                    total_per_person = event_total / people_count
+                    # В смете уже указаны расходы на каждого тренера, поэтому НЕ делим
                     
                     # Для первого тренера показываем факт и экономию, для остальных - прочерки
                     if idx == 0:
@@ -2913,19 +2909,21 @@ class ViewPlanWindow:
                     
                     html_content += f"""
             <tr>
+                <td>{row_number}</td>
                 <td>{html.escape(position)}</td>
                 <td>{html.escape(event.month)}</td>
                 <td>{days}</td>
                 <td>{html.escape(event.location)}</td>
                 <td>{html.escape(purpose)}</td>
-                <td>{format_number_ru(proezd_per_person)}</td>
-                <td>{format_number_ru(prozhivanie_per_person)}</td>
-                <td>{format_number_ru(sutochnie_per_person)}</td>
-                <td>{format_number_ru(total_per_person)}</td>
+                <td>{format_number_ru(proezd)}</td>
+                <td>{format_number_ru(prozhivanie)}</td>
+                <td>{format_number_ru(sutochnie)}</td>
+                <td>{format_number_ru(event_total)}</td>
                 <td>{fact_display}</td>
                 <td>{economy_display}</td>
             </tr>
 """
+                    row_number += 1
                 
                 total_proezd += proezd
                 total_prozhivanie += prozhivanie
@@ -2938,6 +2936,7 @@ class ViewPlanWindow:
             
             html_content += f"""
             <tr style="font-weight: bold; background-color: #f0f0f0;">
+                <td></td>
                 <td>ИТОГО:</td>
                 <td></td>
                 <td></td>
