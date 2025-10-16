@@ -1225,6 +1225,20 @@ class ViewPlanWindow:
             report_text += "1.   ВЫЕЗДНЫЕ МЕРОПРИЯТИЯ\n"
             report_text += "-" * 180 + "\n\n"
             
+            # Предварительный расчёт итогов по выездным
+            away_q_totals = {1: 0, 2: 0, 3: 0, 4: 0}
+            away_total = 0
+            for event in away_events:
+                quarter = get_quarter(event.month)
+                away_q_totals[quarter] += event.children_budget
+                away_total += event.children_budget
+            
+            # Синяя итоговая строка с суммами по кварталам
+            report_text += f"{'':<101} "
+            report_text += f"{format_rubles(away_total):>15} {format_rubles(away_q_totals[1]):>15} {format_rubles(away_q_totals[2]):>15} "
+            report_text += f"{format_rubles(away_q_totals[3]):>15} {format_rubles(away_q_totals[4]):>15}\n"
+            report_text += "-" * 180 + "\n\n"
+            
             q_totals = {1: 0, 2: 0, 3: 0, 4: 0}
             total_all = 0
             
@@ -1278,6 +1292,20 @@ class ViewPlanWindow:
         # Раздел 2: Внутренние мероприятия
         if internal_events:
             report_text += "2.   ВНУТРЕННИЕ И ГОРОДСКИЕ МЕРОПРИЯТИЯ\n"
+            report_text += "-" * 180 + "\n\n"
+            
+            # Предварительный расчёт итогов по внутренним
+            internal_q_totals = {1: 0, 2: 0, 3: 0, 4: 0}
+            internal_total = 0
+            for event in internal_events:
+                quarter = get_quarter(event.month)
+                internal_q_totals[quarter] += event.children_budget
+                internal_total += event.children_budget
+            
+            # Синяя итоговая строка с суммами по кварталам
+            report_text += f"{'':<101} "
+            report_text += f"{format_rubles(internal_total):>15} {format_rubles(internal_q_totals[1]):>15} {format_rubles(internal_q_totals[2]):>15} "
+            report_text += f"{format_rubles(internal_q_totals[3]):>15} {format_rubles(internal_q_totals[4]):>15}\n"
             report_text += "-" * 180 + "\n\n"
             
             q_totals = {1: 0, 2: 0, 3: 0, 4: 0}
@@ -1691,7 +1719,7 @@ class ViewPlanWindow:
             
             elif self.current_report_type == 'annual_ppo':
                 writer.writerow([
-                    '№', 'Тип', 'Название', 'Место', 'Месяц', 'Бюджет ППО', 'Квартал',
+                    '№', 'Тип', 'Название', 'Место', 'Месяц', 'Затраты (руб)', '1 кв.', '2 кв.', '3 кв.', '4 кв.',
                     'Категория расходов', 'Описание/Маршрут', 'Дни/Кол-во', 'Ставка', 'Человек', 'Сумма'
                 ])
                 
@@ -1703,40 +1731,75 @@ class ViewPlanWindow:
                     'Октябрь': 4, 'Ноябрь': 4, 'Декабрь': 4
                 }
                 
-                for idx, event in enumerate(filtered_events, 1):
-                    quarter = q_map.get(event.month, 1)
+                # Разделяем на выездные и внутренние
+                away_events_csv = [e for e in filtered_events if e.event_type == "Выездное"]
+                internal_events_csv = [e for e in filtered_events if e.event_type == "Внутреннее"]
+                
+                # 1. ВЫЕЗДНЫЕ МЕРОПРИЯТИЯ
+                if away_events_csv:
+                    # Заголовок секции
+                    writer.writerow(['', '1. ВЫЕЗДНЫЕ МЕРОПРИЯТИЯ', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])
                     
-                    # Получаем смету ППО для выездных мероприятий
-                    if event.event_type == "Выездное":
+                    # Предварительный расчёт итогов
+                    away_q_totals_csv = {1: 0, 2: 0, 3: 0, 4: 0}
+                    away_total_csv = 0
+                    for event in away_events_csv:
+                        quarter = q_map.get(event.month, 1)
+                        away_q_totals_csv[quarter] += event.children_budget
+                        away_total_csv += event.children_budget
+                    
+                    # Итоговая строка
+                    writer.writerow([
+                        '', '', '', '', '', 
+                        f"{away_total_csv:.2f}",
+                        f"{away_q_totals_csv[1]:.2f}",
+                        f"{away_q_totals_csv[2]:.2f}",
+                        f"{away_q_totals_csv[3]:.2f}",
+                        f"{away_q_totals_csv[4]:.2f}",
+                        '', '', '', '', '', ''
+                    ])
+                    
+                    # Мероприятия
+                    for idx, event in enumerate(away_events_csv, 1):
+                        quarter = q_map.get(event.month, 1)
+                        q_vals = ['', '', '', '']
+                        q_vals[quarter-1] = f"{event.children_budget:.2f}"
+                        
+                        # Получаем смету ППО
                         estimates = self.db.get_estimates_by_event(event.id)
                         ppo_estimate = None
                         for est in estimates:
-                            if est[2] == 'ППО':  # estimate_type
+                            if est[2] == 'ППО':
                                 ppo_estimate = est
                                 break
                         
+                        # Строка мероприятия
+                        writer.writerow([
+                            f"1.{idx:03d}",
+                            event.event_type,
+                            event.name,
+                            event.location,
+                            event.month,
+                            f"{event.children_budget:.2f}",
+                            q_vals[0], q_vals[1], q_vals[2], q_vals[3],
+                            '', '', '', '', '', ''
+                        ])
+                        
+                        # Детализация по смете
                         if ppo_estimate:
                             estimate_id = ppo_estimate[0]
                             items = self.db.get_estimate_items(estimate_id)
                             
-                            # Первая строка - мероприятие
-                            if items:
-                                first_item = items[0]
-                                category = first_item[2]
-                                description = first_item[3] or ''
-                                days_count = first_item[5] or 0
-                                rate = first_item[6] or 0
-                                people_count = first_item[4] or 0
-                                total = first_item[7] or 0
+                            for item in items:
+                                category = item[2]
+                                description = item[3] or ''
+                                days_count = item[5] or 0
+                                rate = item[6] or 0
+                                people_count = item[4] or 0
+                                total = item[7] or 0
                                 
                                 writer.writerow([
-                                    idx,
-                                    event.event_type,
-                                    event.name,
-                                    event.location,
-                                    event.month,
-                                    f"{event.children_budget:.2f}",
-                                    quarter,
+                                    '', '', '', '', '', '', '', '', '', '',
                                     category,
                                     description,
                                     days_count,
@@ -1744,81 +1807,46 @@ class ViewPlanWindow:
                                     people_count,
                                     f"{total:.2f}"
                                 ])
-                                
-                                # Остальные строки - детализация
-                                for item in items[1:]:
-                                    category = item[2]
-                                    description = item[3] or ''
-                                    days_count = item[5] or 0
-                                    rate = item[6] or 0
-                                    people_count = item[4] or 0
-                                    total = item[7] or 0
-                                    
-                                    writer.writerow([
-                                        '',
-                                        '',
-                                        '',
-                                        '',
-                                        '',
-                                        '',
-                                        '',
-                                        category,
-                                        description,
-                                        days_count,
-                                        f"{rate:.2f}",
-                                        people_count,
-                                        f"{total:.2f}"
-                                    ])
-                            else:
-                                # Нет статей расходов
-                                writer.writerow([
-                                    idx,
-                                    event.event_type,
-                                    event.name,
-                                    event.location,
-                                    event.month,
-                                    f"{event.children_budget:.2f}",
-                                    quarter,
-                                    '',
-                                    '',
-                                    '',
-                                    '',
-                                    '',
-                                    ''
-                                ])
-                        else:
-                            # Нет сметы
-                            writer.writerow([
-                                idx,
-                                event.event_type,
-                                event.name,
-                                event.location,
-                                event.month,
-                                f"{event.children_budget:.2f}",
-                                quarter,
-                                '',
-                                '',
-                                '',
-                                '',
-                                '',
-                                ''
-                            ])
-                    else:
-                        # Внутренние мероприятия без детализации
+                
+                # 2. ВНУТРЕННИЕ МЕРОПРИЯТИЯ
+                if internal_events_csv:
+                    # Заголовок секции
+                    writer.writerow(['', '2. ВНУТРЕННИЕ И ГОРОДСКИЕ МЕРОПРИЯТИЯ', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])
+                    
+                    # Предварительный расчёт итогов
+                    internal_q_totals_csv = {1: 0, 2: 0, 3: 0, 4: 0}
+                    internal_total_csv = 0
+                    for event in internal_events_csv:
+                        quarter = q_map.get(event.month, 1)
+                        internal_q_totals_csv[quarter] += event.children_budget
+                        internal_total_csv += event.children_budget
+                    
+                    # Итоговая строка
+                    writer.writerow([
+                        '', '', '', '', '',
+                        f"{internal_total_csv:.2f}",
+                        f"{internal_q_totals_csv[1]:.2f}",
+                        f"{internal_q_totals_csv[2]:.2f}",
+                        f"{internal_q_totals_csv[3]:.2f}",
+                        f"{internal_q_totals_csv[4]:.2f}",
+                        '', '', '', '', '', ''
+                    ])
+                    
+                    # Мероприятия
+                    for idx, event in enumerate(internal_events_csv, 1):
+                        quarter = q_map.get(event.month, 1)
+                        q_vals = ['', '', '', '']
+                        q_vals[quarter-1] = f"{event.children_budget:.2f}"
+                        
                         writer.writerow([
-                            idx,
+                            f"2.{idx:03d}",
                             event.event_type,
                             event.name,
                             event.location,
                             event.month,
                             f"{event.children_budget:.2f}",
-                            quarter,
-                            '',
-                            '',
-                            '',
-                            '',
-                            '',
-                            ''
+                            q_vals[0], q_vals[1], q_vals[2], q_vals[3],
+                            '', '', '', '', '', ''
                         ])
             
             elif self.current_report_type == 'annual_uevp':
@@ -2357,6 +2385,26 @@ class ViewPlanWindow:
             </tr>
 """
                 
+                # Предварительный расчёт итогов по выездным для синей строки
+                away_q_totals_html = {1: 0, 2: 0, 3: 0, 4: 0}
+                away_total_html = 0
+                for event in away_events:
+                    quarter = q_map.get(event.month, 1)
+                    away_q_totals_html[quarter] += event.children_budget
+                    away_total_html += event.children_budget
+                
+                # Синяя итоговая строка с суммами по кварталам
+                html_content += f"""
+            <tr style="background-color: #0066B3; color: white; font-weight: bold;">
+                <td colspan="6"></td>
+                <td>{away_total_html:.2f}</td>
+                <td>{away_q_totals_html[1]:.2f}</td>
+                <td>{away_q_totals_html[2]:.2f}</td>
+                <td>{away_q_totals_html[3]:.2f}</td>
+                <td>{away_q_totals_html[4]:.2f}</td>
+            </tr>
+"""
+                
                 for idx, event in enumerate(away_events, 1):
                     quarter = q_map.get(event.month, 1)
                     
@@ -2456,6 +2504,26 @@ class ViewPlanWindow:
                 html_content += """
             <tr style="background-color: #e6f3ff;">
                 <td colspan="11"><strong>2. ВНУТРЕННИЕ И ГОРОДСКИЕ МЕРОПРИЯТИЯ</strong></td>
+            </tr>
+"""
+                
+                # Предварительный расчёт итогов по внутренним для синей строки
+                internal_q_totals_html = {1: 0, 2: 0, 3: 0, 4: 0}
+                internal_total_html = 0
+                for event in internal_events:
+                    quarter = q_map.get(event.month, 1)
+                    internal_q_totals_html[quarter] += event.children_budget
+                    internal_total_html += event.children_budget
+                
+                # Синяя итоговая строка с суммами по кварталам
+                html_content += f"""
+            <tr style="background-color: #0066B3; color: white; font-weight: bold;">
+                <td colspan="6"></td>
+                <td>{internal_total_html:.2f}</td>
+                <td>{internal_q_totals_html[1]:.2f}</td>
+                <td>{internal_q_totals_html[2]:.2f}</td>
+                <td>{internal_q_totals_html[3]:.2f}</td>
+                <td>{internal_q_totals_html[4]:.2f}</td>
             </tr>
 """
                 
