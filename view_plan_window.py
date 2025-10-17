@@ -1497,7 +1497,8 @@ class ViewPlanWindow:
                     positions = ["Старший тренер"]
             
             # Формируем цель командировки
-            purpose = f"Сопровождение спортсменов для участия в {event.name} по виду спорта {event.sport}"
+            sport_upper = event.sport.upper() if event.sport else ""
+            purpose = f"Сопровождение спортсменов для участия в соревнованиях: \"{event.name}\" - по виду спорта {sport_upper}"
             if len(purpose) > 48:
                 purpose = purpose[:47] + "..."
             
@@ -2063,7 +2064,8 @@ class ViewPlanWindow:
                             positions = ["Старший тренер"]
                     
                     # Формируем цель командировки
-                    purpose = f"Сопровождение спортсменов для участия в {event.name} по виду спорта {event.sport}"
+                    sport_upper = event.sport.upper() if event.sport else ""
+                    purpose = f"Сопровождение спортсменов для участия в соревнованиях: \"{event.name}\" - по виду спорта {sport_upper}"
                     
                     # Итого по мероприятию
                     event_total = proezd + prozhivanie + sutochnie
@@ -2885,7 +2887,8 @@ class ViewPlanWindow:
                         positions = ["Старший тренер"]
                 
                 # Формируем цель командировки
-                purpose = f"Сопровождение спортсменов для участия в {event.name} по виду спорта {event.sport}"
+                sport_upper = event.sport.upper() if event.sport else ""
+                purpose = f"Сопровождение спортсменов для участия в соревнованиях: \"{event.name}\" - по виду спорта {sport_upper}"
                 
                 # Итого по мероприятию
                 event_total = proezd + prozhivanie + sutochnie
